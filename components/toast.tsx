@@ -221,18 +221,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 <span style={styles.message}>{t.message}</span>
               </div>
 
-              <div style={styles.barTrack}>
-                <div
-                  className="toast-bar-fill"
-                  style={{
-                    ...styles.barFill,
-                    background: v.barColor,
-                    animation: t.leaving
-                      ? "none"
-                      : `toastBarShrink ${t.duration}ms linear forwards`,
-                  }}
-                />
-              </div>
+              <div
+                className="toast-bar-fill"
+                style={{
+                  ...styles.barFill,
+                  background: v.barColor,
+                  animation: t.leaving
+                    ? "none"
+                    : `toastBarShrink ${t.duration}ms linear forwards`,
+                }}
+              />
             </div>
           );
         })}
@@ -273,7 +271,7 @@ const styles: { [key: string]: React.CSSProperties } = {
       "linear-gradient(160deg, rgba(16,16,18,0.94) 0%, rgba(4,4,6,0.94) 50%, rgba(8,8,10,0.94) 100%)",
     border: "1px solid rgba(255,255,255,0.1)",
     borderRadius: 12,
-    padding: "12px 16px 10px",
+    padding: "12px 16px",
     backdropFilter: "blur(20px) saturate(140%)",
     WebkitBackdropFilter: "blur(20px) saturate(140%)",
     cursor: "pointer",
@@ -301,15 +299,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 500,
     lineHeight: 1.4,
   },
-  barTrack: {
-    marginTop: 10,
-    marginLeft: -16,
-    marginRight: -16,
-    height: 2.5,
-    background: "rgba(255,255,255,0.06)",
-  },
   barFill: {
-    height: "100%",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 2,
     width: "100%",
   },
 };
