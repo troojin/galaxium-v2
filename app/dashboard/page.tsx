@@ -154,12 +154,6 @@ export default function DashboardPage() {
           <div style={styles.grid}>
             {filtered.map((project) => (
               <div key={project.id} className="glass-sheen project-card" style={styles.card}>
-                {project.imageUrl && (
-                  <div style={styles.cardThumb}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={project.imageUrl} alt="" style={styles.cardThumbImg} />
-                  </div>
-                )}
                 <div style={styles.cardBody}>
                   <h3 style={styles.cardName}>{project.name}</h3>
                   <p style={styles.cardUpdated}>Updated {project.updatedAt}</p>
@@ -344,7 +338,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
     border: "1px dashed rgba(255,255,255,0.15)",
     borderRadius: 16,
-    minHeight: 300,
+    minHeight: 100,
     background: "rgba(255,255,255,0.01)",
   },
   newProjectPlus: {
