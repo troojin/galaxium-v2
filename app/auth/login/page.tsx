@@ -131,7 +131,7 @@ export default function LoginPage() {
         </form>
 
         <p style={{ ...styles.footerText, marginTop: 24 }}>
-          Don't have an account? <a href="/signup" style={styles.link}>Sign up</a>
+          Don't have an account? <a href="/register" style={styles.link}>Sign up</a>
         </p>
       </div>
     </div>

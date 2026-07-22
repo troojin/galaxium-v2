@@ -44,10 +44,7 @@ export default function SignupPage() {
       setError(error.message);
       return;
     }
-
-    // Supabase returns a "success" response with no error even if the email
-    // already exists (this is intentional, to prevent email enumeration).
-    // The only signal is an empty identities array on the returned user.
+    
     if (data.user && data.user.identities && data.user.identities.length === 0) {
       setError("An account with this email already exists. Try signing in instead.");
       return;
