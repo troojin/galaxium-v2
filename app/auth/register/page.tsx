@@ -17,15 +17,12 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
 
     if (password !== confirmPassword) {
-      setError("Passwords don't match.");
       toast.error("Passwords don't match.");
       return;
     }
@@ -44,15 +41,12 @@ export default function SignupPage() {
     setLoading(false);
 
     if (error) {
-      setError(error.message);
       toast.error(error.message);
       return;
     }
 
     if (data.user && data.user.identities && data.user.identities.length === 0) {
-      const msg = "An account with this email already exists. Try signing in instead.";
-      setError(msg);
-      toast.error(msg);
+      toast.error("An account with this email already exists. Try signing in instead.");
       return;
     }
 
@@ -241,8 +235,6 @@ export default function SignupPage() {
                   <a href="#" style={styles.link}>Privacy Policy</a>
                 </span>
               </label>
-
-              {error && <p style={styles.errorText}>{error}</p>}
 
               <button
                 type="submit"

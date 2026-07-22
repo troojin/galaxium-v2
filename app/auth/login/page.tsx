@@ -16,14 +16,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
 
     if (!email.trim() || !password) {
-      setError("Please fill in both fields.");
+      toast.error("Please fill in both fields.");
       return;
     }
 
@@ -37,7 +35,6 @@ export default function LoginPage() {
     setLoading(false);
 
     if (error) {
-      setError(error.message);
       toast.error(error.message);
       return;
     }
@@ -121,8 +118,6 @@ export default function LoginPage() {
           <div style={styles.rowEnd}>
             <a href="/forgot-password" style={styles.link}>Forgot password?</a>
           </div>
-
-          {error && <p style={styles.errorText}>{error}</p>}
 
           <button
             type="submit"
