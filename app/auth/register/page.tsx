@@ -2,11 +2,13 @@
 
 import React, { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/toast";
 
 // Signup page — matches app/login/page.tsx styling: black/white/purple, Inter font.
 
 export default function SignupPage() {
   const supabase = createClient();
+  const toast = useToast();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -24,6 +26,7 @@ export default function SignupPage() {
 
     if (password !== confirmPassword) {
       setError("Passwords don't match.");
+      toast.error("Passwords don't match.");
       return;
     }
 
@@ -42,14 +45,18 @@ export default function SignupPage() {
 
     if (error) {
       setError(error.message);
-      return;
-    }
-    
-    if (data.user && data.user.identities && data.user.identities.length === 0) {
-      setError("An account with this email already exists. Try signing in instead.");
+      toast.error(error.message);
       return;
     }
 
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      const msg = "An account with this email already exists. Try signing in instead.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+
+    toast.success("Confirmation email sent");
     setSubmitted(true);
   };
 

@@ -3,12 +3,14 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/toast";
 
 // Login page — black/white/purple, Inter font.
 
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
+  const toast = useToast();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,9 +38,11 @@ export default function LoginPage() {
 
     if (error) {
       setError(error.message);
+      toast.error(error.message);
       return;
     }
 
+    toast.success("Signed in");
     router.push("/");
     router.refresh();
   };
