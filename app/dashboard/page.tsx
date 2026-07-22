@@ -40,23 +40,6 @@ const SAMPLE_PROJECTS: Project[] = [
   },
 ];
 
-function ProjectIcon({ name, large }: { name: string; large?: boolean }) {
-  // Deterministic gradient seed per project name so each card gets a stable, distinct mark.
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  const hue = Math.abs(hash) % 360;
-  return (
-    <div
-      style={{
-        ...(large ? styles.projectIconLarge : styles.projectIcon),
-        background: `linear-gradient(160deg, hsla(${hue}, 70%, 65%, 0.9) 0%, hsla(${(hue + 40) % 360}, 70%, 45%, 0.9) 100%)`,
-      }}
-    >
-      {name.slice(0, 1).toUpperCase()}
-    </div>
-  );
-}
-
 export default function DashboardPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -171,14 +154,12 @@ export default function DashboardPage() {
           <div style={styles.grid}>
             {filtered.map((project) => (
               <div key={project.id} className="glass-sheen project-card" style={styles.card}>
-                <div style={styles.cardThumb}>
-                  {project.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
+                {project.imageUrl && (
+                  <div style={styles.cardThumb}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={project.imageUrl} alt="" style={styles.cardThumbImg} />
-                  ) : (
-                    <ProjectIcon name={project.name} large />
-                  )}
-                </div>
+                  </div>
+                )}
                 <div style={styles.cardBody}>
                   <h3 style={styles.cardName}>{project.name}</h3>
                   <p style={styles.cardUpdated}>Updated {project.updatedAt}</p>
@@ -207,10 +188,7 @@ export default function DashboardPage() {
                 }}
               >
                 <div style={styles.listLeft}>
-                  <ProjectIcon name={project.name} />
-                  <div>
-                    <p style={styles.listName}>{project.name}</p>
-                  </div>
+                  <p style={styles.listName}>{project.name}</p>
                 </div>
                 <div style={styles.listRight}>
                   <span style={styles.listUpdated}>{project.updatedAt}</span>
@@ -345,30 +323,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-  },
-  projectIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: 700,
-    flexShrink: 0,
-  },
-  projectIconLarge: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#ffffff",
-    fontSize: 26,
-    fontWeight: 700,
-    flexShrink: 0,
   },
   cardName: {
     color: "#ffffff",
