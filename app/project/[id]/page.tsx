@@ -5,9 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 
-// Project detail page — app/project/[id]/page.tsx
-// Matches dashboard styling: black/white/purple, Inter font, glass cards.
-
 interface Project {
   id: string;
   name: string;
@@ -105,7 +102,10 @@ export default function ProjectDetailPage() {
           </div>
         ) : project ? (
           <div className="glass-sheen" style={styles.card}>
-            <h1 style={styles.title}>{project.name}</h1>
+            <div style={styles.titleRow}>
+              <h1 style={styles.title}>{project.name}</h1>
+              <span style={styles.badge}>In progress</span>
+            </div>
             <div style={styles.metaRow}>
               <span style={styles.metaItem}>
                 Created {new Date(project.created_at).toLocaleDateString()}
@@ -118,7 +118,7 @@ export default function ProjectDetailPage() {
 
             <div style={styles.placeholderBlock}>
               <p style={styles.placeholderText}>
-                This is where your project's content will go.
+                This project page is still being built. Check back soon.
               </p>
             </div>
           </div>
@@ -169,8 +169,28 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#ffffff",
     fontSize: 26,
     fontWeight: 700,
-    margin: "0 0 10px",
+    margin: 0,
     letterSpacing: "-0.02em",
+  },
+  titleRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 10,
+    flexWrap: "wrap",
+  },
+  badge: {
+    display: "inline-flex",
+    alignItems: "center",
+    color: "#c4b5fd",
+    background: "rgba(139,92,246,0.14)",
+    border: "1px solid rgba(139,92,246,0.3)",
+    borderRadius: 999,
+    padding: "3px 10px",
+    fontSize: 11.5,
+    fontWeight: 600,
+    letterSpacing: "0.01em",
+    whiteSpace: "nowrap",
   },
   subtitle: {
     color: "#9a9aa5",
