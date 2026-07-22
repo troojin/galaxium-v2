@@ -14,6 +14,7 @@ interface Project {
   status: ProjectStatus;
   database: string;
   updatedAt: string;
+  imageUrl?: string;
 }
 
 const SAMPLE_PROJECTS: Project[] = [
@@ -65,7 +66,7 @@ const STATUS_STYLES: Record<ProjectStatus, { dot: string; label: string; text: s
   error: { dot: "#f87171", label: "Error", text: "#fca5a5" },
 };
 
-function ProjectIcon({ name }: { name: string }) {
+function ProjectIcon({ name, large }: { name: string; large?: boolean }) {
   // Deterministic gradient seed per project name so each card gets a stable, distinct mark.
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -73,7 +74,7 @@ function ProjectIcon({ name }: { name: string }) {
   return (
     <div
       style={{
-        ...styles.projectIcon,
+        ...(large ? styles.projectIconLarge : styles.projectIcon),
         background: `linear-gradient(160deg, hsla(${hue}, 70%, 65%, 0.9) 0%, hsla(${(hue + 40) % 360}, 70%, 45%, 0.9) 100%)`,
       }}
     >
@@ -196,9 +197,14 @@ export default function DashboardPage() {
           <div style={styles.grid}>
             {filtered.map((project) => (
               <div key={project.id} className="glass-sheen project-card" style={styles.card}>
-                <div style={styles.cardTop}>
-                  <ProjectIcon name={project.name} />
-                  <span style={styles.statusPill}>
+                <div style={styles.cardThumb}>
+                  {project.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={project.imageUrl} alt="" style={styles.cardThumbImg} />
+                  ) : (
+                    <ProjectIcon name={project.name} large />
+                  )}
+                  <span style={styles.statusPillFloating}>
                     <span
                       style={{
                         ...styles.statusDot,
@@ -210,11 +216,13 @@ export default function DashboardPage() {
                     </span>
                   </span>
                 </div>
-                <h3 style={styles.cardName}>{project.name}</h3>
-                <p style={styles.cardMeta}>
-                  {project.region} · {project.database}
-                </p>
-                <p style={styles.cardUpdated}>Updated {project.updatedAt}</p>
+                <div style={styles.cardBody}>
+                  <h3 style={styles.cardName}>{project.name}</h3>
+                  <p style={styles.cardMeta}>
+                    {project.region} · {project.database}
+                  </p>
+                  <p style={styles.cardUpdated}>Updated {project.updatedAt}</p>
+                </div>
               </div>
             ))}
             <div
@@ -354,25 +362,59 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-    gap: 16,
+    gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+    gap: 20,
   },
   card: {
     position: "relative",
     background: "linear-gradient(160deg, rgba(12,12,14,0.7) 0%, rgba(0,0,0,0.65) 50%, rgba(6,6,8,0.7) 100%)",
     border: "1px solid rgba(255,255,255,0.07)",
     borderRadius: 16,
-    padding: 20,
     backdropFilter: "blur(24px) saturate(140%)",
     WebkitBackdropFilter: "blur(24px) saturate(140%)",
     boxShadow: "0 12px 32px -12px rgba(0,0,0,0.7)",
     overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
   },
-  cardTop: {
+  cardThumb: {
+    position: "relative",
+    width: "100%",
+    height: 180,
+    background: "rgba(255,255,255,0.03)",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 14,
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  cardThumbImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+  },
+  statusPillFloating: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    fontSize: 12,
+    fontWeight: 500,
+    background: "rgba(10,10,10,0.6)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    padding: "5px 10px",
+    borderRadius: 20,
+    border: "1px solid rgba(255,255,255,0.08)",
+  },
+  cardBody: {
+    padding: "18px 22px 22px",
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
   },
   projectIcon: {
     width: 36,
@@ -383,6 +425,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     justifyContent: "center",
     color: "#ffffff",
     fontSize: 15,
+    fontWeight: 700,
+    flexShrink: 0,
+  },
+  projectIconLarge: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#ffffff",
+    fontSize: 26,
     fontWeight: 700,
     flexShrink: 0,
   },
@@ -401,29 +455,30 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   cardName: {
     color: "#ffffff",
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: 600,
-    margin: "0 0 6px",
+    margin: "0 0 8px",
   },
   cardMeta: {
     color: "#9a9aa5",
-    fontSize: 13,
-    margin: "0 0 4px",
+    fontSize: 13.5,
+    margin: "0 0 6px",
   },
   cardUpdated: {
     color: "#6b6b74",
-    fontSize: 12,
-    margin: 0,
+    fontSize: 12.5,
+    margin: "auto 0 0",
+    paddingTop: 10,
   },
   newProjectCard: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 10,
     border: "1px dashed rgba(255,255,255,0.15)",
     borderRadius: 16,
-    minHeight: 128,
+    minHeight: 300,
     background: "rgba(255,255,255,0.01)",
   },
   newProjectPlus: {
