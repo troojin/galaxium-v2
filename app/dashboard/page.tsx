@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/toast";
 
 // Projects dashboard — matches app/login & app/signup styling: black/white/purple, Inter font, glass cards.
 
@@ -32,6 +33,7 @@ function timeAgo(dateString: string): string {
 export default function DashboardPage() {
   const router = useRouter();
   const supabase = createClient();
+  const toast = useToast();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,7 @@ export default function DashboardPage() {
 
       if (error) {
         setError(error.message);
+        toast.error("Couldn't load your projects.");
       } else {
         setProjects(data ?? []);
       }
@@ -120,11 +123,13 @@ export default function DashboardPage() {
 
     if (error) {
       setModalError(error.message);
+      toast.error("Couldn't create the project.");
       return;
     }
 
     setProjects((prev) => [data as Project, ...prev]);
     setShowModal(false);
+    toast.success(`"${trimmed}" created`);
   }
 
   return (
