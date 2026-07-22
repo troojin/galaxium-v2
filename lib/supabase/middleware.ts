@@ -25,14 +25,9 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refreshes the session if expired — required for Server Components,
-  // which can't set cookies themselves.
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  // Protect any route outside /login, /signup, and /auth by redirecting
-  // signed-out users back to /login. Adjust this allowlist to your app.
   const publicPaths = ["/login", "/signup", "/auth"];
   const isPublicPath = publicPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
