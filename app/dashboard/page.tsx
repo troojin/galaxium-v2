@@ -5,13 +5,9 @@ import { useRouter } from "next/navigation";
 
 // Projects dashboard — matches app/login & app/signup styling: black/white/purple, Inter font, glass cards.
 
-type ProjectStatus = "active" | "paused" | "error";
-
 interface Project {
   id: string;
   name: string;
-  region: string;
-  status: ProjectStatus;
   database: string;
   updatedAt: string;
   imageUrl?: string;
@@ -21,50 +17,34 @@ const SAMPLE_PROJECTS: Project[] = [
   {
     id: "proj_1",
     name: "acme-storefront",
-    region: "us-east-1",
-    status: "active",
     database: "Postgres 15",
     updatedAt: "2h ago",
   },
   {
     id: "proj_2",
     name: "internal-tools",
-    region: "eu-west-2",
-    status: "active",
     database: "Postgres 15",
     updatedAt: "5h ago",
   },
   {
     id: "proj_3",
     name: "waitlist-mvp",
-    region: "us-west-1",
-    status: "paused",
     database: "Postgres 15",
     updatedAt: "3d ago",
   },
   {
     id: "proj_4",
     name: "billing-service",
-    region: "us-east-1",
-    status: "error",
     database: "Postgres 14",
     updatedAt: "12m ago",
   },
   {
     id: "proj_5",
     name: "mobile-app-backend",
-    region: "ap-southeast-1",
-    status: "active",
     database: "Postgres 15",
     updatedAt: "1d ago",
   },
 ];
-
-const STATUS_STYLES: Record<ProjectStatus, { dot: string; label: string; text: string }> = {
-  active: { dot: "#34d399", label: "Active", text: "#6ee7b7" },
-  paused: { dot: "#9a9aa5", label: "Paused", text: "#c4c4cc" },
-  error: { dot: "#f87171", label: "Error", text: "#fca5a5" },
-};
 
 function ProjectIcon({ name, large }: { name: string; large?: boolean }) {
   // Deterministic gradient seed per project name so each card gets a stable, distinct mark.
@@ -204,17 +184,6 @@ export default function DashboardPage() {
                   ) : (
                     <ProjectIcon name={project.name} large />
                   )}
-                  <span style={styles.statusPillFloating}>
-                    <span
-                      style={{
-                        ...styles.statusDot,
-                        background: STATUS_STYLES[project.status].dot,
-                      }}
-                    />
-                    <span style={{ color: STATUS_STYLES[project.status].text }}>
-                      {STATUS_STYLES[project.status].label}
-                    </span>
-                  </span>
                 </div>
                 <div style={styles.cardBody}>
                   <h3 style={styles.cardName}>{project.name}</h3>
@@ -256,17 +225,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div style={styles.listRight}>
-                  <span style={styles.statusPill}>
-                    <span
-                      style={{
-                        ...styles.statusDot,
-                        background: STATUS_STYLES[project.status].dot,
-                      }}
-                    />
-                    <span style={{ color: STATUS_STYLES[project.status].text }}>
-                      {STATUS_STYLES[project.status].label}
-                    </span>
-                  </span>
                   <span style={styles.listUpdated}>{project.updatedAt}</span>
                 </div>
               </div>
@@ -394,22 +352,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     objectFit: "cover",
     display: "block",
   },
-  statusPillFloating: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    fontSize: 12,
-    fontWeight: 500,
-    background: "rgba(10,10,10,0.6)",
-    backdropFilter: "blur(8px)",
-    WebkitBackdropFilter: "blur(8px)",
-    padding: "5px 10px",
-    borderRadius: 20,
-    border: "1px solid rgba(255,255,255,0.08)",
-  },
   cardBody: {
     padding: "18px 22px 22px",
     flex: 1,
@@ -439,19 +381,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 26,
     fontWeight: 700,
     flexShrink: 0,
-  },
-  statusPill: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    fontSize: 12,
-    fontWeight: 500,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: "50%",
-    display: "inline-block",
   },
   cardName: {
     color: "#ffffff",
