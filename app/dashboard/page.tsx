@@ -258,7 +258,12 @@ export default function DashboardPage() {
         ) : view === "grid" ? (
           <div style={styles.grid}>
             {filtered.map((project) => (
-              <div key={project.id} className="glass-sheen project-card" style={styles.card}>
+              <div
+                key={project.id}
+                className="glass-sheen project-card"
+                style={styles.card}
+                onClick={() => router.push(`/project/${project.id}`)}
+              >
                 <div style={styles.cardBody}>
                   <h3 style={styles.cardName}>{project.name}</h3>
                   <p style={styles.cardUpdated}>Updated {timeAgo(project.updated_at)}</p>
@@ -281,6 +286,7 @@ export default function DashboardPage() {
                   borderBottom:
                     i === filtered.length - 1 ? "none" : "1px solid rgba(255,255,255,0.06)",
                 }}
+                onClick={() => router.push(`/project/${project.id}`)}
               >
                 <div style={styles.listLeft}>
                   <p style={styles.listName}>{project.name}</p>
