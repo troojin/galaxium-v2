@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 interface Project {
   id: string;
   name: string;
-  database: string;
   updatedAt: string;
   imageUrl?: string;
 }
@@ -17,31 +16,26 @@ const SAMPLE_PROJECTS: Project[] = [
   {
     id: "proj_1",
     name: "acme-storefront",
-    database: "Postgres 15",
     updatedAt: "2h ago",
   },
   {
     id: "proj_2",
     name: "internal-tools",
-    database: "Postgres 15",
     updatedAt: "5h ago",
   },
   {
     id: "proj_3",
     name: "waitlist-mvp",
-    database: "Postgres 15",
     updatedAt: "3d ago",
   },
   {
     id: "proj_4",
     name: "billing-service",
-    database: "Postgres 14",
     updatedAt: "12m ago",
   },
   {
     id: "proj_5",
     name: "mobile-app-backend",
-    database: "Postgres 15",
     updatedAt: "1d ago",
   },
 ];
@@ -187,9 +181,6 @@ export default function DashboardPage() {
                 </div>
                 <div style={styles.cardBody}>
                   <h3 style={styles.cardName}>{project.name}</h3>
-                  <p style={styles.cardMeta}>
-                    {project.region} · {project.database}
-                  </p>
                   <p style={styles.cardUpdated}>Updated {project.updatedAt}</p>
                 </div>
               </div>
@@ -219,9 +210,6 @@ export default function DashboardPage() {
                   <ProjectIcon name={project.name} />
                   <div>
                     <p style={styles.listName}>{project.name}</p>
-                    <p style={styles.listMeta}>
-                      {project.region} · {project.database}
-                    </p>
                   </div>
                 </div>
                 <div style={styles.listRight}>
@@ -388,11 +376,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 600,
     margin: "0 0 8px",
   },
-  cardMeta: {
-    color: "#9a9aa5",
-    fontSize: 13.5,
-    margin: "0 0 6px",
-  },
   cardUpdated: {
     color: "#6b6b74",
     fontSize: 12.5,
@@ -449,11 +432,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 14,
     fontWeight: 600,
     margin: "0 0 3px",
-  },
-  listMeta: {
-    color: "#9a9aa5",
-    fontSize: 12.5,
-    margin: 0,
   },
   listRight: {
     display: "flex",
