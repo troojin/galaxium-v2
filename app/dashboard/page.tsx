@@ -1,53 +1,131 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 // Projects dashboard — matches app/login & app/signup styling: black/white/purple, Inter font, glass cards.
 
 interface Project {
   id: string;
   name: string;
-  updatedAt: string;
-  imageUrl?: string;
+  updated_at: string;
 }
 
-const SAMPLE_PROJECTS: Project[] = [
-  {
-    id: "proj_1",
-    name: "acme-storefront",
-    updatedAt: "2h ago",
-  },
-  {
-    id: "proj_2",
-    name: "internal-tools",
-    updatedAt: "5h ago",
-  },
-  {
-    id: "proj_3",
-    name: "waitlist-mvp",
-    updatedAt: "3d ago",
-  },
-  {
-    id: "proj_4",
-    name: "billing-service",
-    updatedAt: "12m ago",
-  },
-  {
-    id: "proj_5",
-    name: "mobile-app-backend",
-    updatedAt: "1d ago",
-  },
-];
+function timeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  const years = Math.floor(months / 12);
+  return `${years}y ago`;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
+  const supabase = createClient();
+
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
 
-  const filtered = SAMPLE_PROJECTS.filter((p) =>
+  const [showModal, setShowModal] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProjects() {
+      setLoading(true);
+      setError(null);
+
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, name, updated_at")
+        .order("updated_at", { ascending: false });
+
+      if (!isMounted) return;
+
+      if (error) {
+        setError(error.message);
+      } else {
+        setProjects(data ?? []);
+      }
+      setLoading(false);
+    }
+
+    loadProjects();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [supabase]);
+
+  const filtered = projects.filter((p) =>
     p.name.toLowerCase().includes(query.trim().toLowerCase())
   );
+
+  function openModal() {
+    setNewName("");
+    setModalError(null);
+    setShowModal(true);
+  }
+
+  function closeModal() {
+    if (creating) return;
+    setShowModal(false);
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      setModalError("Give your project a name.");
+      return;
+    }
+
+    setCreating(true);
+    setModalError(null);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setModalError("You need to be signed in to create a project.");
+      setCreating(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("projects")
+      .insert({ name: trimmed, user_id: user.id })
+      .select("id, name, updated_at")
+      .single();
+
+    setCreating(false);
+
+    if (error) {
+      setModalError(error.message);
+      return;
+    }
+
+    setProjects((prev) => [data as Project, ...prev]);
+    setShowModal(false);
+  }
 
   return (
     <div style={styles.page}>
@@ -95,19 +173,33 @@ export default function DashboardPage() {
         .view-toggle-btn {
           transition: background 0.15s ease, color 0.15s ease;
         }
+        .modal-overlay {
+          animation: fadeIn 0.15s ease;
+        }
+        .modal-card {
+          animation: modalIn 0.18s ease;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes modalIn {
+          from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
       `}</style>
 
       <div style={styles.container}>
         <div style={styles.headerRow}>
           <div>
             <h1 style={styles.title}>Projects</h1>
-            <p style={styles.subtitle}>{SAMPLE_PROJECTS.length} projects across your organization</p>
+            <p style={styles.subtitle}>
+              {loading
+                ? "Loading your projects…"
+                : `${projects.length} project${projects.length === 1 ? "" : "s"} across your organization`}
+            </p>
           </div>
-          <button
-            className="primary-btn"
-            style={styles.newProjectBtn}
-            onClick={() => router.push("/new-project")}
-          >
+          <button className="primary-btn" style={styles.newProjectBtn} onClick={openModal}>
             + New project
           </button>
         </div>
@@ -146,7 +238,15 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {filtered.length === 0 ? (
+        {error && (
+          <div className="glass-sheen" style={{ ...styles.emptyState, marginBottom: 20 }}>
+            <p style={{ ...styles.emptyText, color: "#f87171" }}>
+              Couldn't load projects: {error}
+            </p>
+          </div>
+        )}
+
+        {!error && !loading && filtered.length === 0 && projects.length > 0 ? (
           <div className="glass-sheen" style={styles.emptyState}>
             <p style={styles.emptyText}>No projects match "{query}"</p>
           </div>
@@ -156,15 +256,11 @@ export default function DashboardPage() {
               <div key={project.id} className="glass-sheen project-card" style={styles.card}>
                 <div style={styles.cardBody}>
                   <h3 style={styles.cardName}>{project.name}</h3>
-                  <p style={styles.cardUpdated}>Updated {project.updatedAt}</p>
+                  <p style={styles.cardUpdated}>Updated {timeAgo(project.updated_at)}</p>
                 </div>
               </div>
             ))}
-            <div
-              className="new-project-card"
-              style={styles.newProjectCard}
-              onClick={() => router.push("/new-project")}
-            >
+            <div className="new-project-card" style={styles.newProjectCard} onClick={openModal}>
               <span style={styles.newProjectPlus}>+</span>
               <span style={styles.newProjectLabel}>New project</span>
             </div>
@@ -185,13 +281,68 @@ export default function DashboardPage() {
                   <p style={styles.listName}>{project.name}</p>
                 </div>
                 <div style={styles.listRight}>
-                  <span style={styles.listUpdated}>{project.updatedAt}</span>
+                  <span style={styles.listUpdated}>{timeAgo(project.updated_at)}</span>
                 </div>
               </div>
             ))}
+            <div
+              className="new-project-card"
+              style={{ ...styles.newProjectCard, borderRadius: 0, borderTop: "1px solid rgba(255,255,255,0.06)", border: "none", borderTopWidth: 1 }}
+              onClick={openModal}
+            >
+              <span style={styles.newProjectPlus}>+</span>
+              <span style={styles.newProjectLabel}>New project</span>
+            </div>
           </div>
         )}
       </div>
+
+      {showModal && (
+        <div
+          className="modal-overlay"
+          style={styles.modalOverlay}
+          onClick={closeModal}
+        >
+          <div
+            className="glass-sheen modal-card"
+            style={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={styles.modalTitle}>New project</h2>
+            <p style={styles.modalSubtitle}>Give your project a name to get started.</p>
+            <form onSubmit={handleCreate}>
+              <input
+                autoFocus
+                type="text"
+                placeholder="my-awesome-project"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                style={styles.modalInput}
+                disabled={creating}
+              />
+              {modalError && <p style={styles.modalError}>{modalError}</p>}
+              <div style={styles.modalActions}>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  style={styles.modalCancelBtn}
+                  disabled={creating}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="primary-btn"
+                  style={styles.modalCreateBtn}
+                  disabled={creating}
+                >
+                  {creating ? "Creating…" : "Create project"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -295,23 +446,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     flexDirection: "column",
   },
-  cardThumb: {
-    position: "relative",
-    width: "100%",
-    height: 180,
-    background: "rgba(255,255,255,0.03)",
-    borderBottom: "1px solid rgba(255,255,255,0.06)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  cardThumbImg: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    display: "block",
-  },
   cardBody: {
     padding: "18px 22px 22px",
     flex: 1,
@@ -404,5 +538,83 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#9a9aa5",
     fontSize: 14,
     margin: 0,
+  },
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.6)",
+    backdropFilter: "blur(4px)",
+    WebkitBackdropFilter: "blur(4px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    padding: 20,
+  },
+  modalCard: {
+    position: "relative",
+    width: "100%",
+    maxWidth: 420,
+    background: "linear-gradient(160deg, rgba(16,16,18,0.95) 0%, rgba(4,4,6,0.95) 50%, rgba(8,8,10,0.95) 100%)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 16,
+    backdropFilter: "blur(24px) saturate(140%)",
+    WebkitBackdropFilter: "blur(24px) saturate(140%)",
+    boxShadow: "0 24px 64px -12px rgba(0,0,0,0.85)",
+    padding: "28px 26px 24px",
+  },
+  modalTitle: {
+    color: "#ffffff",
+    fontSize: 19,
+    fontWeight: 700,
+    margin: "0 0 6px",
+    letterSpacing: "-0.01em",
+  },
+  modalSubtitle: {
+    color: "#9a9aa5",
+    fontSize: 13.5,
+    margin: "0 0 18px",
+  },
+  modalInput: {
+    width: "100%",
+    background: "rgba(0,0,0,0.35)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 10,
+    padding: "11px 14px",
+    color: "#ffffff",
+    fontSize: 14,
+    transition: "border-color 0.2s, box-shadow 0.2s",
+  },
+  modalError: {
+    color: "#f87171",
+    fontSize: 12.5,
+    margin: "10px 0 0",
+  },
+  modalActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 20,
+  },
+  modalCancelBtn: {
+    background: "transparent",
+    color: "#9a9aa5",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 10,
+    padding: "9px 16px",
+    fontSize: 13.5,
+    fontWeight: 500,
+    cursor: "pointer",
+  },
+  modalCreateBtn: {
+    background: "linear-gradient(160deg, rgba(124,77,225,0.85) 0%, rgba(91,33,182,0.85) 100%)",
+    color: "#ffffff",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 10,
+    padding: "9px 18px",
+    fontSize: 13.5,
+    fontWeight: 600,
+    cursor: "pointer",
+    boxShadow: "0 4px 16px rgba(91,33,182,0.4), inset 0 0.5px 0 rgba(255,255,255,0.2)",
   },
 };
