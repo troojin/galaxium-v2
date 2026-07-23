@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 
-// Projects dashboard — matches app/login & app/signup styling: black/white/purple, Inter font, glass cards.
-
 interface Project {
   id: string;
   name: string;
@@ -229,14 +227,13 @@ export default function DashboardPage() {
           animation: modalIn 0.18s ease;
         }
         .brand-icon-btn {
-          transition: border-color 0.18s ease, transform 0.18s ease;
+          transition: transform 0.18s ease;
         }
         .brand-icon-btn:hover {
-          border-color: rgba(139,92,246,0.45);
           transform: translateY(-1px);
         }
-        .brand-popover {
-          animation: popoverIn 0.16s ease;
+        .brand-inline-text {
+          animation: inlineTextIn 0.16s ease;
         }
         .rainbow-v2 {
           background: linear-gradient(90deg, #ff5f6d, #ffc371, #a8e063, #56ccf2, #8b5cf6, #ff5f6d);
@@ -259,9 +256,9 @@ export default function DashboardPage() {
           from { opacity: 0; transform: translateY(-8px) scale(0.98); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
-        @keyframes popoverIn {
-          from { opacity: 0; transform: translateY(-6px) scale(0.97); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
+        @keyframes inlineTextIn {
+          from { opacity: 0; transform: translateX(-4px); }
+          to { opacity: 1; transform: translateX(0); }
         }
       `}</style>
 
@@ -277,11 +274,9 @@ export default function DashboardPage() {
           </button>
 
           {brandOpen && (
-            <div className="brand-popover" style={styles.brandPopover}>
-              <span style={styles.brandPopoverText}>
-                Galaxium <span className="rainbow-v2" style={styles.rainbowV2}>V2</span>
-              </span>
-            </div>
+            <span className="brand-inline-text" style={styles.brandInlineText}>
+              Galaxium <span className="rainbow-v2" style={styles.rainbowV2}>V2</span>
+            </span>
           )}
         </div>
       </div>
@@ -472,6 +467,9 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   brandWrap: {
     position: "relative",
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
   },
   brandIconBtn: {
     display: "flex",
@@ -479,34 +477,22 @@ const styles: { [key: string]: React.CSSProperties } = {
     justifyContent: "center",
     width: 38,
     height: 38,
-    borderRadius: 10,
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.08)",
+    background: "transparent",
+    border: "none",
     cursor: "pointer",
     padding: 0,
-    overflow: "hidden",
   },
   brandIconImg: {
     width: 22,
     height: 22,
     objectFit: "contain",
   },
-  brandPopover: {
-    position: "absolute",
-    top: "calc(100% + 10px)",
-    right: 0,
-    background: "linear-gradient(160deg, rgba(16,16,18,0.95) 0%, rgba(4,4,6,0.95) 50%, rgba(8,8,10,0.95) 100%)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    padding: "10px 16px",
-    boxShadow: "0 12px 32px -8px rgba(0,0,0,0.8)",
-    whiteSpace: "nowrap",
-  },
-  brandPopoverText: {
+  brandInlineText: {
     color: "#ffffff",
     fontSize: 14,
     fontWeight: 600,
     letterSpacing: "-0.01em",
+    whiteSpace: "nowrap",
   },
   rainbowV2: {
     fontWeight: 800,
