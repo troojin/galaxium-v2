@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 
-// Projects dashboard — matches app/login & app/signup styling: black/white/purple, Inter font, glass cards.
-
 interface Project {
   id: string;
   name: string;
@@ -35,6 +33,7 @@ export default function DashboardPage() {
   const supabase = createClient();
   const toast = useToast();
 
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +47,30 @@ export default function DashboardPage() {
   const [modalError, setModalError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
+    async function checkAuth() {
+      const { data } = await supabase.auth.getSession();
+      if (!isMounted) return;
+
+      if (!data.session) {
+        router.replace("/auth/login");
+        return;
+      }
+      setCheckingAuth(false);
+    }
+
+    checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (checkingAuth) return;
+
     let isMounted = true;
 
     async function loadProjects() {
@@ -75,7 +98,7 @@ export default function DashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, [supabase]);
+  }, [checkingAuth, supabase]);
 
   const filtered = projects.filter((p) =>
     p.name.toLowerCase().includes(query.trim().toLowerCase())
@@ -130,6 +153,10 @@ export default function DashboardPage() {
     setProjects((prev) => [data as Project, ...prev]);
     setShowModal(false);
     toast.success(`"${trimmed}" created`);
+  }
+
+  if (checkingAuth) {
+    return <div style={styles.page} />;
   }
 
   return (
