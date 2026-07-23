@@ -46,7 +46,6 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  const [brandOpen, setBrandOpen] = useState(false);
   const brandRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -102,18 +101,6 @@ export default function DashboardPage() {
       isMounted = false;
     };
   }, [checkingAuth, supabase]);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (brandRef.current && !brandRef.current.contains(e.target as Node)) {
-        setBrandOpen(false);
-      }
-    }
-    if (brandOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [brandOpen]);
 
   const filtered = projects.filter((p) =>
     p.name.toLowerCase().includes(query.trim().toLowerCase())
@@ -226,15 +213,6 @@ export default function DashboardPage() {
         .modal-card {
           animation: modalIn 0.18s ease;
         }
-        .brand-icon-btn {
-          transition: transform 0.18s ease;
-        }
-        .brand-icon-btn:hover {
-          transform: translateY(-1px);
-        }
-        .brand-inline-text {
-          animation: inlineTextIn 0.16s ease;
-        }
         .rainbow-v2 {
           background: linear-gradient(90deg, #ff5f6d, #ffc371, #a8e063, #56ccf2, #8b5cf6, #ff5f6d);
           background-size: 300% 100%;
@@ -256,28 +234,14 @@ export default function DashboardPage() {
           from { opacity: 0; transform: translateY(-8px) scale(0.98); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
-        @keyframes inlineTextIn {
-          from { opacity: 0; transform: translateX(-4px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
       `}</style>
 
       <div style={styles.topbar}>
         <div ref={brandRef} style={styles.brandWrap}>
-          <button
-            className="brand-icon-btn"
-            style={styles.brandIconBtn}
-            onClick={() => setBrandOpen((v) => !v)}
-            aria-label="Galaxium"
-          >
-            <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIconImg} />
-          </button>
-
-          {brandOpen && (
-            <span className="brand-inline-text" style={styles.brandInlineText}>
-              Galaxium <span className="rainbow-v2" style={styles.rainbowV2}>V2</span>
-            </span>
-          )}
+          <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIconImg} />
+          <span style={styles.brandInlineText}>
+            Galaxium <span className="rainbow-v2" style={styles.rainbowV2}>V2</span>
+          </span>
         </div>
       </div>
 
@@ -470,17 +434,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     alignItems: "center",
     gap: 10,
-  },
-  brandIconBtn: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 38,
-    height: 38,
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    padding: 0,
   },
   brandIconImg: {
     width: 22,
