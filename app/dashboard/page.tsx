@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
+
+// Projects dashboard — matches app/login & app/signup styling: black/white/purple, Inter font, glass cards.
 
 interface Project {
   id: string;
@@ -45,6 +47,9 @@ export default function DashboardPage() {
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+
+  const [brandOpen, setBrandOpen] = useState(false);
+  const brandRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -99,6 +104,18 @@ export default function DashboardPage() {
       isMounted = false;
     };
   }, [checkingAuth, supabase]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (brandRef.current && !brandRef.current.contains(e.target as Node)) {
+        setBrandOpen(false);
+      }
+    }
+    if (brandOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [brandOpen]);
 
   const filtered = projects.filter((p) =>
     p.name.toLowerCase().includes(query.trim().toLowerCase())
@@ -211,6 +228,29 @@ export default function DashboardPage() {
         .modal-card {
           animation: modalIn 0.18s ease;
         }
+        .brand-icon-btn {
+          transition: border-color 0.18s ease, transform 0.18s ease;
+        }
+        .brand-icon-btn:hover {
+          border-color: rgba(139,92,246,0.45);
+          transform: translateY(-1px);
+        }
+        .brand-popover {
+          animation: popoverIn 0.16s ease;
+        }
+        .rainbow-v2 {
+          background: linear-gradient(90deg, #ff5f6d, #ffc371, #a8e063, #56ccf2, #8b5cf6, #ff5f6d);
+          background-size: 300% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          color: transparent;
+          animation: rainbowShift 4s linear infinite;
+        }
+        @keyframes rainbowShift {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 300% 50%; }
+        }
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -219,7 +259,32 @@ export default function DashboardPage() {
           from { opacity: 0; transform: translateY(-8px) scale(0.98); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
+        @keyframes popoverIn {
+          from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
       `}</style>
+
+      <div style={styles.topbar}>
+        <div ref={brandRef} style={styles.brandWrap}>
+          <button
+            className="brand-icon-btn"
+            style={styles.brandIconBtn}
+            onClick={() => setBrandOpen((v) => !v)}
+            aria-label="Galaxium"
+          >
+            <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIconImg} />
+          </button>
+
+          {brandOpen && (
+            <div className="brand-popover" style={styles.brandPopover}>
+              <span style={styles.brandPopoverText}>
+                Galaxium <span className="rainbow-v2" style={styles.rainbowV2}>V2</span>
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
 
       <div style={styles.container}>
         <div style={styles.headerRow}>
@@ -390,11 +455,66 @@ const styles: { [key: string]: React.CSSProperties } = {
     minHeight: "100vh",
     width: "100%",
     background: "#0a0a0a",
-    padding: "48px 24px",
+    padding: 0,
+  },
+  topbar: {
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    padding: "14px 24px",
+    background: "rgba(10,10,10,0.75)",
+    backdropFilter: "blur(16px) saturate(140%)",
+    WebkitBackdropFilter: "blur(16px) saturate(140%)",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+  },
+  brandWrap: {
+    position: "relative",
+  },
+  brandIconBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    cursor: "pointer",
+    padding: 0,
+    overflow: "hidden",
+  },
+  brandIconImg: {
+    width: 22,
+    height: 22,
+    objectFit: "contain",
+  },
+  brandPopover: {
+    position: "absolute",
+    top: "calc(100% + 10px)",
+    right: 0,
+    background: "linear-gradient(160deg, rgba(16,16,18,0.95) 0%, rgba(4,4,6,0.95) 50%, rgba(8,8,10,0.95) 100%)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 12,
+    padding: "10px 16px",
+    boxShadow: "0 12px 32px -8px rgba(0,0,0,0.8)",
+    whiteSpace: "nowrap",
+  },
+  brandPopoverText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: 600,
+    letterSpacing: "-0.01em",
+  },
+  rainbowV2: {
+    fontWeight: 800,
   },
   container: {
     maxWidth: 1080,
     margin: "0 auto",
+    padding: "48px 24px",
   },
   headerRow: {
     display: "flex",
