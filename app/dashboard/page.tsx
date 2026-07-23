@@ -422,7 +422,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     zIndex: 100,
     display: "flex",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "flex-start",
     padding: "14px 24px",
     background: "rgba(10,10,10,0.75)",
     backdropFilter: "blur(16px) saturate(140%)",
