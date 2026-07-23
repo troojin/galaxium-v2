@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 
-// Login page — black/white/purple, Inter font.
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +15,20 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        router.replace("/dashboard");
+        return;
+      }
+      setCheckingSession(false);
+    };
+    checkSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,9 +53,13 @@ export default function LoginPage() {
     }
 
     toast.success("Signed in");
-    router.push("/");
+    router.push("/dashboard");
     router.refresh();
   };
+
+  if (checkingSession) {
+    return <div style={styles.page} />;
+  }
 
   return (
     <div style={styles.page}>

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 
-// Signup page — matches app/login/page.tsx styling: black/white/purple, Inter font.
-
 export default function SignupPage() {
+  const router = useRouter();
   const supabase = createClient();
   const toast = useToast();
 
@@ -18,6 +18,20 @@ export default function SignupPage() {
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        router.replace("/dashboard");
+        return;
+      }
+      setCheckingSession(false);
+    };
+    checkSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +67,10 @@ export default function SignupPage() {
     toast.success("Confirmation email sent");
     setSubmitted(true);
   };
+
+  if (checkingSession) {
+    return <div style={styles.page} />;
+  }
 
   return (
     <div style={styles.page}>
