@@ -32,12 +32,12 @@ export async function POST(req: NextRequest) {
       return new Response("Project not found", { status: 404 });
     }
 
-    const groqRes = await createChatCompletionStream({
+    const groqStream = await createChatCompletionStream({
       messages,
       temperature: 0.7,
     });
 
-    return new Response(groqRes.body, {
+    return new Response(groqStream, {
       status: 200,
       headers: {
         "Content-Type": "text/event-stream",
