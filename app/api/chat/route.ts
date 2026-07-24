@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       temperature: 0.7,
     });
 
-    return new Response(groqRes.body, {
+    return new Response(groqRes, {
       status: 200,
       headers: {
         "Content-Type": "text/event-stream",

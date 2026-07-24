@@ -297,14 +297,14 @@ export default function DashboardPage() {
         {error && (
           <div className="glass-sheen" style={{ ...styles.emptyState, marginBottom: 20 }}>
             <p style={{ ...styles.emptyText, color: "#f87171" }}>
-              Couldn't load projects: {error}
+              Couldn&apos;t load projects: {error}
             </p>
           </div>
         )}
 
         {!error && !loading && filtered.length === 0 && projects.length > 0 ? (
           <div className="glass-sheen" style={styles.emptyState}>
-            <p style={styles.emptyText}>No projects match "{query}"</p>
+            <p style={styles.emptyText}>No projects match &quot;{query}&quot;</p>
           </div>
         ) : view === "grid" ? (
           <div style={styles.grid}>
