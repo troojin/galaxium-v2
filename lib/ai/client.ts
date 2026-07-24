@@ -19,7 +19,7 @@ let currentKeyIndex = 0;
 function getNextApiKey(): string {
   const keys = getGroqApiKeys();
   if (keys.length === 0) {
-    throw new Error("No GROQ_API_KEY_* environment variables found.");
+    throw new Error("No GROQ_API_KEY_* environment variables configured on Cloudflare.");
   }
   const key = keys[currentKeyIndex % keys.length];
   currentKeyIndex = (currentKeyIndex + 1) % keys.length;
@@ -96,7 +96,7 @@ export async function createChatCompletion(
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Groq returned ${res.status}: ${errText}`);
+    throw new Error(`Groq API returned status ${res.status}: ${errText}`);
   }
 
   return (await res.json()) as ChatCompletion;
@@ -125,11 +125,11 @@ export async function createChatCompletionStream(
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Groq returned ${res.status}: ${errText}`);
+    throw new Error(`Groq API returned status ${res.status}: ${errText}`);
   }
 
   if (!res.body) {
-    throw new Error("Response body is empty.");
+    throw new Error("Groq returned an empty response body.");
   }
 
   return res.body;
