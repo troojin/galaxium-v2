@@ -28,8 +28,12 @@ export function getAiClient(): Groq {
   return new Groq({ apiKey: getNextApiKey() });
 }
 
+type ChatCompletionParams = Parameters
+  Groq["chat"]["completions"]["create"]
+>[0];
+
 export async function createChatCompletion(
-  params: Omit<Groq.Chat.Completions.CompletionCreateParamsNonStreaming, "model"> & {
+  params: Omit<ChatCompletionParams, "model"> & {
     model?: string;
   }
 ): Promise<Groq.Chat.ChatCompletion> {
