@@ -1,4 +1,4 @@
-import Groq from "groq-sdk";
+const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 
 const GROQ_API_KEYS = [
   process.env.GROQ_API_KEY_1,
@@ -24,20 +24,76 @@ function getNextApiKey(): string {
   return key;
 }
 
-export function getAiClient(): Groq {
-  return new Groq({ apiKey: getNextApiKey() });
+export interface ChatMessage {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
 }
 
-type ChatCompletionParams = Parameters<Groq["chat"]["completions"]["create"]>[0];
+export interface ChatCompletionParams {
+  messages: ChatMessage[];
+  model?: string;
+  temperature?: number;
+  max_tokens?: number;
+  top_p?: number;
+  stream?: false;
+  reasoning_effort?: string;
+  [key: string]: unknown;
+}
+
+export interface ChatCompletionChoice {
+  index: number;
+  message: {
+    role: string;
+    content: string;
+    reasoning?: string;
+  };
+  finish_reason: string;
+}
+
+export interface ChatCompletion {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: ChatCompletionChoice[];
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
+export interface AiClient {
+  apiKey: string;
+}
+
+export function getAiClient(): AiClient {
+  return { apiKey: getNextApiKey() };
+}
 
 export async function createChatCompletion(
-  params: Omit<ChatCompletionParams, "model"> & {
-    model?: string;
-  }
-): Promise<Groq.Chat.ChatCompletion> {
+  params: Omit<ChatCompletionParams, "model"> & { model?: string }
+): Promise<ChatCompletion> {
   const client = getAiClient();
-  return client.chat.completions.create({
+
+  const body: ChatCompletionParams = {
     model: "llama-3.3-70b-versatile",
     ...params,
+  };
+
+  const res = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${client.apiKey}`,
+    },
+    body: JSON.stringify(body),
   });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Groq returned ${res.status}: ${errText}`);
+  }
+
+  return (await res.json()) as ChatCompletion;
 }
