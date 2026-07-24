@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
@@ -12,7 +12,14 @@ interface Project {
   updated_at: string;
 }
 
-export default function ProjectDetailPage() {
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+}
+
+export default function ProjectChatPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const supabase = createClient();
@@ -22,43 +29,190 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [input, setInput] = useState("");
+  const [streaming, setStreaming] = useState(false);
+
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Load project
   useEffect(() => {
     let isMounted = true;
-
     async function loadProject() {
       setLoading(true);
-      setNotFound(false);
-
       const { data, error } = await supabase
         .from("projects")
         .select("id, name, created_at, updated_at")
         .eq("id", params.id)
         .maybeSingle();
-
       if (!isMounted) return;
-
-      if (error) {
-        toast.error("Couldn't load this project.");
-      } else if (!data) {
-        setNotFound(true);
-      } else {
-        setProject(data as Project);
-      }
+      if (error) toast.error("Couldn't load this project.");
+      else if (!data) setNotFound(true);
+      else setProject(data as Project);
       setLoading(false);
     }
-
     loadProject();
+    return () => { isMounted = false; };
+  }, [params.id]);
 
-    return () => {
-      isMounted = false;
+  // Load messages
+  useEffect(() => {
+    if (!project) return;
+    let isMounted = true;
+    async function loadMessages() {
+      setMessagesLoading(true);
+      const { data, error } = await supabase
+        .from("messages")
+        .select("id, role, content, created_at")
+        .eq("project_id", params.id)
+        .order("created_at", { ascending: true });
+      if (!isMounted) return;
+      if (error) toast.error("Couldn't load messages.");
+      else setMessages((data ?? []) as Message[]);
+      setMessagesLoading(false);
+    }
+    loadMessages();
+    return () => { isMounted = false; };
+  }, [project]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, streaming]);
+
+  // Auto-resize textarea
+  function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setInput(e.target.value);
+    const el = e.target;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 160) + "px";
+  }
+
+  const sendMessage = useCallback(async () => {
+    const trimmed = input.trim();
+    if (!trimmed || streaming) return;
+
+    const userMsg: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: trimmed,
+      created_at: new Date().toISOString(),
     };
-  }, [supabase, params.id]);
+
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+    setStreaming(true);
+
+    // Save user message to Supabase
+    await supabase.from("messages").insert({
+      id: userMsg.id,
+      project_id: params.id,
+      role: "user",
+      content: trimmed,
+    });
+
+    // Build history for Groq
+    const history = [...messages, userMsg].map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    // Placeholder assistant message
+    const assistantId = crypto.randomUUID();
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantId, role: "assistant", content: "", created_at: new Date().toISOString() },
+    ]);
+
+    try {
+      abortRef.current = new AbortController();
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history, projectId: params.id }),
+        signal: abortRef.current.signal,
+      });
+
+      if (!res.ok || !res.body) throw new Error("Stream failed");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        // Parse SSE lines
+        for (const line of chunk.split("\n")) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6);
+            if (data === "[DONE]") break;
+            try {
+              const parsed = JSON.parse(data);
+              const delta = parsed.choices?.[0]?.delta?.content ?? "";
+              if (delta) {
+                fullContent += delta;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId ? { ...m, content: fullContent } : m
+                  )
+                );
+              }
+            } catch {}
+          }
+        }
+      }
+
+      // Save assistant message to Supabase
+      await supabase.from("messages").insert({
+        id: assistantId,
+        project_id: params.id,
+        role: "assistant",
+        content: fullContent,
+      });
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        // User cancelled
+      } else {
+        toast.error("Something went wrong. Try again.");
+        setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+      }
+    } finally {
+      setStreaming(false);
+      abortRef.current = null;
+    }
+  }, [input, streaming, messages, params.id, supabase]);
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function stopStreaming() {
+    abortRef.current?.abort();
+  }
 
   return (
     <div style={styles.page}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        textarea::placeholder { color: #6b6b74; }
+        textarea:focus { outline: none; }
+        .back-link:hover { color: #c4b5fd !important; }
+        .send-btn:hover:not(:disabled) { filter: brightness(1.15); }
+        .send-btn:disabled { opacity: 0.45; cursor: default; }
+        .stop-btn:hover { border-color: rgba(248,113,113,0.5) !important; color: #fca5a5 !important; }
         .glass-sheen { position: relative; }
         .glass-sheen::before {
           content: '';
@@ -77,53 +231,156 @@ export default function ProjectDetailPage() {
           box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.25), inset 0 -0.5px 0 rgba(255,255,255,0.03);
           pointer-events: none;
         }
-        .back-link:hover { color: #c4b5fd !important; }
+        .rainbow-v2 {
+          background: linear-gradient(90deg, #ff5f6d, #ffc371, #a8e063, #56ccf2, #8b5cf6, #ff5f6d);
+          background-size: 300% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          color: transparent;
+          animation: rainbowShift 4s linear infinite;
+        }
+        @keyframes rainbowShift {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 300% 50%; }
+        }
+        .msg-assistant { animation: msgIn 0.18s ease; }
+        @keyframes msgIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .cursor-blink::after {
+          content: '▍';
+          display: inline-block;
+          color: #8b5cf6;
+          animation: blink 0.9s step-end infinite;
+          margin-left: 1px;
+          font-size: 0.85em;
+        }
+        @keyframes blink {
+          0%, 100% { opacity: 1; } 50% { opacity: 0; }
+        }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
       `}</style>
 
-      <div style={styles.container}>
-        <button
-          className="back-link"
-          style={styles.backLink}
-          onClick={() => router.push("/dashboard")}
-        >
-          ← Back to projects
-        </button>
-
-        {loading ? (
-          <div className="glass-sheen" style={styles.card}>
-            <p style={styles.loadingText}>Loading project…</p>
+      {/* Topbar */}
+      <div style={styles.topbar}>
+        <div style={styles.topbarLeft}>
+          <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIcon} />
+          <span style={styles.brandText}>
+            Galaxium <span className="rainbow-v2" style={{ fontWeight: 800 }}>V2</span>
+          </span>
+        </div>
+        {project && (
+          <div style={styles.topbarCenter}>
+            <span style={styles.projectName}>{project.name}</span>
           </div>
-        ) : notFound ? (
-          <div className="glass-sheen" style={styles.card}>
-            <h1 style={styles.title}>Project not found</h1>
-            <p style={styles.subtitle}>
-              This project doesn't exist, or you don't have access to it.
-            </p>
-          </div>
-        ) : project ? (
-          <div className="glass-sheen" style={styles.card}>
-            <div style={styles.titleRow}>
-              <h1 style={styles.title}>{project.name}</h1>
-              <span style={styles.badge}>In progress</span>
-            </div>
-            <div style={styles.metaRow}>
-              <span style={styles.metaItem}>
-                Created {new Date(project.created_at).toLocaleDateString()}
-              </span>
-              <span style={styles.metaDot}>•</span>
-              <span style={styles.metaItem}>
-                Updated {new Date(project.updated_at).toLocaleDateString()}
-              </span>
-            </div>
-
-            <div style={styles.placeholderBlock}>
-              <p style={styles.placeholderText}>
-                This project page is still being built. Check back soon.
-              </p>
-            </div>
-          </div>
-        ) : null}
+        )}
+        <div style={styles.topbarRight}>
+          <button
+            className="back-link"
+            style={styles.backBtn}
+            onClick={() => router.push("/dashboard")}
+          >
+            ← Dashboard
+          </button>
+        </div>
       </div>
+
+      {/* Body */}
+      {loading ? (
+        <div style={styles.centerState}>
+          <p style={styles.mutedText}>Loading project…</p>
+        </div>
+      ) : notFound ? (
+        <div style={styles.centerState}>
+          <div className="glass-sheen" style={styles.notFoundCard}>
+            <h1 style={styles.notFoundTitle}>Project not found</h1>
+            <p style={styles.mutedText}>This project doesn't exist, or you don't have access.</p>
+          </div>
+        </div>
+      ) : (
+        <div style={styles.chatLayout}>
+          {/* Messages */}
+          <div style={styles.messagesList}>
+            {messagesLoading ? (
+              <div style={styles.centerInChat}>
+                <p style={styles.mutedText}>Loading messages…</p>
+              </div>
+            ) : messages.length === 0 ? (
+              <div style={styles.centerInChat}>
+                <div style={styles.emptyIcon}>✦</div>
+                <p style={styles.emptyTitle}>Start a conversation</p>
+                <p style={styles.emptySubtitle}>
+                  Ask anything about <strong style={{ color: "#e4e4e8" }}>{project?.name}</strong>
+                </p>
+              </div>
+            ) : (
+              <div style={styles.messagesInner}>
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={msg.role === "assistant" ? "msg-assistant" : undefined}
+                    style={msg.role === "user" ? styles.userRow : styles.assistantRow}
+                  >
+                    {msg.role === "assistant" && (
+                      <div style={styles.assistantAvatar}>✦</div>
+                    )}
+                    <div
+                      style={msg.role === "user" ? styles.userBubble : styles.assistantBubble}
+                      className={
+                        msg.role === "assistant" && streaming && msg === messages[messages.length - 1] && msg.content === ""
+                          ? "cursor-blink"
+                          : msg.role === "assistant" && streaming && msg === messages[messages.length - 1]
+                          ? "cursor-blink"
+                          : undefined
+                      }
+                    >
+                      {msg.content || (msg.role === "assistant" ? "" : "")}
+                    </div>
+                  </div>
+                ))}
+                <div ref={bottomRef} />
+              </div>
+            )}
+          </div>
+
+          {/* Input bar */}
+          <div style={styles.inputArea}>
+            <div className="glass-sheen" style={styles.inputCard}>
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                placeholder="Message the AI…"
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                style={styles.textarea}
+                disabled={streaming}
+              />
+              <div style={styles.inputActions}>
+                <span style={styles.hintText}>↵ send · shift+↵ newline</span>
+                {streaming ? (
+                  <button className="stop-btn" style={styles.stopBtn} onClick={stopStreaming}>
+                    ◼ Stop
+                  </button>
+                ) : (
+                  <button
+                    className="send-btn"
+                    style={styles.sendBtn}
+                    onClick={sendMessage}
+                    disabled={!input.trim() || streaming}
+                  >
+                    Send ↑
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -133,13 +390,64 @@ const styles: { [key: string]: React.CSSProperties } = {
     minHeight: "100vh",
     width: "100%",
     background: "#0a0a0a",
-    padding: "48px 24px",
+    display: "flex",
+    flexDirection: "column",
   },
-  container: {
-    maxWidth: 800,
-    margin: "0 auto",
+  topbar: {
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "14px 24px",
+    background: "rgba(10,10,10,0.75)",
+    backdropFilter: "blur(16px) saturate(140%)",
+    WebkitBackdropFilter: "blur(16px) saturate(140%)",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+    gap: 16,
   },
-  backLink: {
+  topbarLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    minWidth: 0,
+    flex: "0 0 auto",
+  },
+  brandIcon: {
+    width: 22,
+    height: 22,
+    objectFit: "contain",
+  },
+  brandText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: 600,
+    letterSpacing: "-0.01em",
+    whiteSpace: "nowrap",
+  },
+  topbarCenter: {
+    flex: 1,
+    display: "flex",
+    justifyContent: "center",
+    minWidth: 0,
+  },
+  projectName: {
+    color: "#d4d4dc",
+    fontSize: 13.5,
+    fontWeight: 600,
+    letterSpacing: "-0.01em",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    maxWidth: 320,
+  },
+  topbarRight: {
+    flex: "0 0 auto",
+    display: "flex",
+    alignItems: "center",
+  },
+  backBtn: {
     background: "none",
     border: "none",
     color: "#9a9aa5",
@@ -147,79 +455,193 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 500,
     cursor: "pointer",
     padding: 0,
-    marginBottom: 24,
     transition: "color 0.15s ease",
+    whiteSpace: "nowrap",
   },
-  card: {
+  centerState: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  notFoundCard: {
     position: "relative",
     background: "linear-gradient(160deg, rgba(12,12,14,0.7) 0%, rgba(0,0,0,0.65) 50%, rgba(6,6,8,0.7) 100%)",
     border: "1px solid rgba(255,255,255,0.07)",
     borderRadius: 16,
     backdropFilter: "blur(24px) saturate(140%)",
     WebkitBackdropFilter: "blur(24px) saturate(140%)",
-    boxShadow: "0 12px 32px -12px rgba(0,0,0,0.7)",
-    padding: "32px 32px 36px",
-  },
-  loadingText: {
-    color: "#9a9aa5",
-    fontSize: 14,
-    margin: 0,
-  },
-  title: {
-    color: "#ffffff",
-    fontSize: 26,
-    fontWeight: 700,
-    margin: 0,
-    letterSpacing: "-0.02em",
-  },
-  titleRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 10,
-    flexWrap: "wrap",
-  },
-  badge: {
-    display: "inline-flex",
-    alignItems: "center",
-    color: "#c4b5fd",
-    background: "rgba(139,92,246,0.14)",
-    border: "1px solid rgba(139,92,246,0.3)",
-    borderRadius: 999,
-    padding: "3px 10px",
-    fontSize: 11.5,
-    fontWeight: 600,
-    letterSpacing: "0.01em",
-    whiteSpace: "nowrap",
-  },
-  subtitle: {
-    color: "#9a9aa5",
-    fontSize: 14,
-    margin: 0,
-  },
-  metaRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 28,
-  },
-  metaItem: {
-    color: "#6b6b74",
-    fontSize: 13,
-  },
-  metaDot: {
-    color: "#3a3a42",
-    fontSize: 13,
-  },
-  placeholderBlock: {
-    border: "1px dashed rgba(255,255,255,0.12)",
-    borderRadius: 12,
-    padding: "40px 20px",
+    padding: "32px 36px",
     textAlign: "center",
   },
-  placeholderText: {
-    color: "#6b6b74",
+  notFoundTitle: {
+    color: "#ffffff",
+    fontSize: 22,
+    fontWeight: 700,
+    margin: "0 0 8px",
+    letterSpacing: "-0.02em",
+  },
+  mutedText: {
+    color: "#9a9aa5",
+    fontSize: 14,
+    margin: 0,
+  },
+  chatLayout: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    maxWidth: 780,
+    width: "100%",
+    margin: "0 auto",
+    padding: "0 20px",
+    minHeight: 0,
+  },
+  messagesList: {
+    flex: 1,
+    overflowY: "auto",
+    paddingTop: 32,
+    paddingBottom: 16,
+    display: "flex",
+    flexDirection: "column",
+  },
+  centerInChat: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    paddingBottom: 60,
+  },
+  emptyIcon: {
+    fontSize: 28,
+    color: "#8b5cf6",
+    opacity: 0.7,
+  },
+  emptyTitle: {
+    color: "#ffffff",
+    fontSize: 17,
+    fontWeight: 600,
+    margin: 0,
+    letterSpacing: "-0.01em",
+  },
+  emptySubtitle: {
+    color: "#9a9aa5",
     fontSize: 13.5,
     margin: 0,
+    textAlign: "center",
+  },
+  messagesInner: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 20,
+  },
+  userRow: {
+    display: "flex",
+    justifyContent: "flex-end",
+  },
+  assistantRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  assistantAvatar: {
+    flexShrink: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    background: "rgba(139,92,246,0.15)",
+    border: "1px solid rgba(139,92,246,0.25)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 12,
+    color: "#a78bfa",
+    marginTop: 2,
+  },
+  userBubble: {
+    maxWidth: "72%",
+    background: "linear-gradient(160deg, rgba(124,77,225,0.75) 0%, rgba(91,33,182,0.7) 100%)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: "16px 4px 16px 16px",
+    padding: "11px 15px",
+    color: "#ffffff",
+    fontSize: 14,
+    lineHeight: 1.6,
+    boxShadow: "0 4px 16px rgba(91,33,182,0.3)",
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+  },
+  assistantBubble: {
+    maxWidth: "calc(100% - 38px)",
+    color: "#e4e4e8",
+    fontSize: 14,
+    lineHeight: 1.75,
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+    padding: "2px 0",
+  },
+  inputArea: {
+    paddingBottom: 28,
+    paddingTop: 8,
+  },
+  inputCard: {
+    position: "relative",
+    background: "linear-gradient(160deg, rgba(12,12,14,0.8) 0%, rgba(0,0,0,0.75) 50%, rgba(6,6,8,0.8) 100%)",
+    border: "1px solid rgba(255,255,255,0.09)",
+    borderRadius: 16,
+    backdropFilter: "blur(24px) saturate(140%)",
+    WebkitBackdropFilter: "blur(24px) saturate(140%)",
+    boxShadow: "0 8px 32px -8px rgba(0,0,0,0.7)",
+    padding: "14px 14px 10px",
+  },
+  textarea: {
+    width: "100%",
+    background: "transparent",
+    border: "none",
+    resize: "none",
+    color: "#ffffff",
+    fontSize: 14,
+    lineHeight: 1.6,
+    padding: "2px 4px",
+    minHeight: 24,
+    maxHeight: 160,
+    overflowY: "auto",
+  },
+  inputActions: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 8,
+    paddingTop: 8,
+    borderTop: "1px solid rgba(255,255,255,0.05)",
+  },
+  hintText: {
+    color: "#4a4a54",
+    fontSize: 11.5,
+  },
+  sendBtn: {
+    background: "linear-gradient(160deg, rgba(124,77,225,0.85) 0%, rgba(91,33,182,0.85) 100%)",
+    color: "#ffffff",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 8,
+    padding: "7px 14px",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    boxShadow: "0 2px 8px rgba(91,33,182,0.4), inset 0 0.5px 0 rgba(255,255,255,0.2)",
+    transition: "filter 0.15s ease",
+  },
+  stopBtn: {
+    background: "transparent",
+    color: "#f87171",
+    border: "1px solid rgba(248,113,113,0.25)",
+    borderRadius: 8,
+    padding: "7px 14px",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "border-color 0.15s, color 0.15s",
   },
 };
