@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
@@ -22,7 +22,7 @@ interface Message {
 export default function ProjectChatPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
 
   const [project, setProject] = useState<Project | null>(null);
@@ -55,7 +55,7 @@ export default function ProjectChatPage() {
     }
     loadProject();
     return () => { isMounted = false; };
-  }, [params.id]);
+  }, [params.id, supabase]);
 
   useEffect(() => {
     if (!project) return;
@@ -74,7 +74,7 @@ export default function ProjectChatPage() {
     }
     loadMessages();
     return () => { isMounted = false; };
-  }, [project]);
+  }, [params.id, project, supabase]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -105,12 +105,19 @@ export default function ProjectChatPage() {
     }
     setStreaming(true);
 
-    await supabase.from("messages").insert({
+    const { error: userInsertError } = await supabase.from("messages").insert({
       id: userMsg.id,
       project_id: params.id,
       role: "user",
       content: trimmed,
     });
+
+    if (userInsertError) {
+      toast.error("Couldn't save your message.");
+      setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
+      setStreaming(false);
+      return;
+    }
 
     const history = [...messages, userMsg].map((m) => ({
       role: m.role,
@@ -133,42 +140,78 @@ export default function ProjectChatPage() {
         signal: abortRef.current.signal,
       });
 
-      if (!res.ok || !res.body) throw new Error("Stream failed");
+      if (!res.ok || !res.body) {
+        const errorText = await res.text().catch(() => "");
+        throw new Error(errorText || "Stream failed");
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let fullContent = "";
+      let buffer = "";
+      let streamDone = false;
 
-      while (true) {
+      const appendDelta = (delta: string) => {
+        fullContent += delta;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: fullContent } : m
+          )
+        );
+      };
+
+      while (!streamDone) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        for (const line of chunk.split("\n")) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6);
-            if (data === "[DONE]") break;
-            try {
-              const parsed = JSON.parse(data);
-              const delta = parsed.choices?.[0]?.delta?.content ?? "";
-              if (delta) {
-                fullContent += delta;
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: fullContent } : m
-                  )
-                );
-              }
-            } catch {}
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+
+        for (const event of events) {
+          const data = event
+            .split("\n")
+            .filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5).trim())
+            .join("\n");
+
+          if (!data) continue;
+          if (data === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+
+          const parsed = JSON.parse(data);
+          const delta = parsed.choices?.[0]?.delta?.content;
+          if (typeof delta === "string" && delta.length > 0) {
+            appendDelta(delta);
           }
         }
       }
 
-      await supabase.from("messages").insert({
+      const tail = buffer.trim();
+      if (tail.startsWith("data:") && tail.slice(5).trim() !== "[DONE]") {
+        const parsed = JSON.parse(tail.slice(5).trim());
+        const delta = parsed.choices?.[0]?.delta?.content;
+        if (typeof delta === "string" && delta.length > 0) {
+          appendDelta(delta);
+        }
+      }
+
+      if (!fullContent.trim()) {
+        throw new Error("The AI returned an empty response.");
+      }
+
+      const { error: assistantInsertError } = await supabase.from("messages").insert({
         id: assistantId,
         project_id: params.id,
         role: "assistant",
         content: fullContent,
       });
+
+      if (assistantInsertError) {
+        toast.error("Reply sent, but couldn't save it.");
+      }
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
         // User cancelled
@@ -180,7 +223,7 @@ export default function ProjectChatPage() {
       setStreaming(false);
       abortRef.current = null;
     }
-  }, [input, streaming, messages, params.id, supabase]);
+  }, [input, streaming, messages, params.id, supabase, toast]);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
