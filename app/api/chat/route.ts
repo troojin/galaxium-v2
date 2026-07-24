@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Verify Project Ownership
+    // Verify Project Ownership
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .select("id")
@@ -44,12 +44,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const groqStream = await createChatCompletionStream({
+    const groqRes = await createChatCompletionStream({
       messages,
       temperature: 0.7,
     });
 
-    return new Response(groqStream, {
+    return new Response(groqRes.body, {
       status: 200,
       headers: {
         "Content-Type": "text/event-stream",
