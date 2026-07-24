@@ -2,6 +2,7 @@ const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 
 function getGroqApiKeys(): string[] {
   return [
+    process.env.GROQ_API_KEY,
     process.env.GROQ_API_KEY_1,
     process.env.GROQ_API_KEY_2,
     process.env.GROQ_API_KEY_3,
@@ -19,7 +20,7 @@ let currentKeyIndex = 0;
 function getNextApiKey(): string {
   const keys = getGroqApiKeys();
   if (keys.length === 0) {
-    throw new Error("No GROQ_API_KEY_* environment variables configured on Cloudflare.");
+    throw new Error("No GROQ_API_KEY or GROQ_API_KEY_* environment variables configured.");
   }
   const key = keys[currentKeyIndex % keys.length];
   currentKeyIndex = (currentKeyIndex + 1) % keys.length;

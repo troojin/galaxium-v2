@@ -4,6 +4,26 @@ import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "edge";
 
+const SYSTEM_PROMPT: ChatMessage = {
+  role: "system",
+  content:
+    "You are Galaxium AI, a helpful conversational assistant. Answer naturally, keep context from the chat history, and ask brief follow-up questions when useful.",
+};
+
+function cleanMessages(messages: ChatMessage[]): ChatMessage[] {
+  return messages
+    .filter((message) =>
+      ["user", "assistant", "system"].includes(message.role) &&
+      typeof message.content === "string" &&
+      message.content.trim().length > 0
+    )
+    .slice(-30)
+    .map((message) => ({
+      role: message.role,
+      content: message.content.trim(),
+    }));
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -44,9 +64,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const chatMessages = cleanMessages(messages);
+
+    if (chatMessages.length === 0 || chatMessages.at(-1)?.role !== "user") {
+      return new Response(
+        JSON.stringify({ error: "Send a user message to start chatting" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const groqRes = await createChatCompletionStream({
-      messages,
+      messages: [SYSTEM_PROMPT, ...chatMessages],
       temperature: 0.7,
+      max_tokens: 1024,
     });
 
     return new Response(groqRes, {
