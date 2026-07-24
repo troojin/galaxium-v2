@@ -76,10 +76,8 @@ export async function createChatCompletion(
 ): Promise<ChatCompletion> {
   const client = getAiClient();
 
-  const body: ChatCompletionParams = {
-    ...params,
-    model: params.model ?? "llama-3.3-70b-versatile",
-  };
+  const model = params.model ?? "llama-3.3-70b-versatile";
+  const body: ChatCompletionParams = Object.assign({}, params, { model });
 
   const res = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
     method: "POST",
