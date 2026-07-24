@@ -38,7 +38,6 @@ export default function ProjectChatPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Load project
   useEffect(() => {
     let isMounted = true;
     async function loadProject() {
@@ -58,7 +57,6 @@ export default function ProjectChatPage() {
     return () => { isMounted = false; };
   }, [params.id]);
 
-  // Load messages
   useEffect(() => {
     if (!project) return;
     let isMounted = true;
@@ -78,12 +76,10 @@ export default function ProjectChatPage() {
     return () => { isMounted = false; };
   }, [project]);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streaming]);
 
-  // Auto-resize textarea
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);
     const el = e.target;
@@ -109,7 +105,6 @@ export default function ProjectChatPage() {
     }
     setStreaming(true);
 
-    // Save user message to Supabase
     await supabase.from("messages").insert({
       id: userMsg.id,
       project_id: params.id,
@@ -117,13 +112,11 @@ export default function ProjectChatPage() {
       content: trimmed,
     });
 
-    // Build history for Groq
     const history = [...messages, userMsg].map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    // Placeholder assistant message
     const assistantId = crypto.randomUUID();
     setMessages((prev) => [
       ...prev,
@@ -150,7 +143,6 @@ export default function ProjectChatPage() {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
-        // Parse SSE lines
         for (const line of chunk.split("\n")) {
           if (line.startsWith("data: ")) {
             const data = line.slice(6);
@@ -171,7 +163,6 @@ export default function ProjectChatPage() {
         }
       }
 
-      // Save assistant message to Supabase
       await supabase.from("messages").insert({
         id: assistantId,
         project_id: params.id,
@@ -265,7 +256,6 @@ export default function ProjectChatPage() {
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
       `}</style>
 
-      {/* Topbar */}
       <div style={styles.topbar}>
         <div style={styles.topbarLeft}>
           <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIcon} />
@@ -289,7 +279,6 @@ export default function ProjectChatPage() {
         </div>
       </div>
 
-      {/* Body */}
       {loading ? (
         <div style={styles.centerState}>
           <p style={styles.mutedText}>Loading project…</p>
@@ -303,7 +292,6 @@ export default function ProjectChatPage() {
         </div>
       ) : (
         <div style={styles.chatLayout}>
-          {/* Messages */}
           <div style={styles.messagesList}>
             {messagesLoading ? (
               <div style={styles.centerInChat}>
@@ -331,14 +319,14 @@ export default function ProjectChatPage() {
                     <div
                       style={msg.role === "user" ? styles.userBubble : styles.assistantBubble}
                       className={
-                        msg.role === "assistant" && streaming && msg === messages[messages.length - 1] && msg.content === ""
-                          ? "cursor-blink"
-                          : msg.role === "assistant" && streaming && msg === messages[messages.length - 1]
+                        msg.role === "assistant" &&
+                        streaming &&
+                        msg.id === messages[messages.length - 1]?.id
                           ? "cursor-blink"
                           : undefined
                       }
                     >
-                      {msg.content || (msg.role === "assistant" ? "" : "")}
+                      {msg.content}
                     </div>
                   </div>
                 ))}
@@ -347,7 +335,6 @@ export default function ProjectChatPage() {
             )}
           </div>
 
-          {/* Input bar */}
           <div style={styles.inputArea}>
             <div className="glass-sheen" style={styles.inputCard}>
               <textarea
