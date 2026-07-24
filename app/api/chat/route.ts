@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { createChatCompletionStream, ChatMessage } from "@/lib/ai/client";
 import { createClient } from "@/lib/supabase/server";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
   try {
