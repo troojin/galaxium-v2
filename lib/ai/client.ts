@@ -29,7 +29,7 @@ export function getAiClient(): Groq {
 }
 
 export async function createChatCompletion(
-  params: Omit<Groq.Chat.ChatCompletionCreateParamsNonStreaming, "model"> & {
+  params: Omit<Groq.Chat.Completions.CompletionCreateParamsNonStreaming, "model"> & {
     model?: string;
   }
 ): Promise<Groq.Chat.ChatCompletion> {
