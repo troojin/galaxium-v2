@@ -287,7 +287,7 @@ export default function ProjectChatPage() {
         <div style={styles.centerState}>
           <div className="glass-sheen" style={styles.notFoundCard}>
             <h1 style={styles.notFoundTitle}>Project not found</h1>
-            <p style={styles.mutedText}>This project doesn't exist, or you don't have access.</p>
+            <p style={styles.mutedText}>This project doesn&apos;t exist, or you don&apos;t have access.</p>
           </div>
         </div>
       ) : (
