@@ -1,17 +1,20 @@
+import { getRequestContext } from "@cloudflare/next-on-pages";
+
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 
 function getGroqApiKeys(): string[] {
+  const env = getRequestContext().env as Record<string, string | undefined>;
   return [
-    process.env.GROQ_API_KEY,
-    process.env.GROQ_API_KEY_1,
-    process.env.GROQ_API_KEY_2,
-    process.env.GROQ_API_KEY_3,
-    process.env.GROQ_API_KEY_4,
-    process.env.GROQ_API_KEY_5,
-    process.env.GROQ_API_KEY_6,
-    process.env.GROQ_API_KEY_7,
-    process.env.GROQ_API_KEY_8,
-    process.env.GROQ_API_KEY_9,
+    env.GROQ_API_KEY,
+    env.GROQ_API_KEY_1,
+    env.GROQ_API_KEY_2,
+    env.GROQ_API_KEY_3,
+    env.GROQ_API_KEY_4,
+    env.GROQ_API_KEY_5,
+    env.GROQ_API_KEY_6,
+    env.GROQ_API_KEY_7,
+    env.GROQ_API_KEY_8,
+    env.GROQ_API_KEY_9,
   ].filter(Boolean) as string[];
 }
 
@@ -79,6 +82,8 @@ export async function createChatCompletion(
 ): Promise<ChatCompletion> {
   const client = getAiClient();
 
+  // NOTE: llama-3.3-70b-versatile was deprecated by Groq (announced June 17, 2026).
+  // Recommended replacements: openai/gpt-oss-120b or qwen/qwen3.6-27b.
   const model = params.model ?? "openai/gpt-oss-120b";
   const body = {
     ...params,
@@ -108,7 +113,9 @@ export async function createChatCompletionStream(
 ): Promise<ReadableStream<Uint8Array>> {
   const client = getAiClient();
 
-  const model = params.model ?? "llama-3.3-70b-versatile";
+  // NOTE: llama-3.3-70b-versatile was deprecated by Groq (announced June 17, 2026).
+  // Recommended replacements: openai/gpt-oss-120b or qwen/qwen3.6-27b.
+  const model = params.model ?? "openai/gpt-oss-120b";
   const body = {
     ...params,
     model,
