@@ -79,7 +79,7 @@ export async function createChatCompletion(
 ): Promise<ChatCompletion> {
   const client = getAiClient();
 
-  const model = params.model ?? "llama-3.3-70b-versatile";
+  const model = params.model ?? "openai/gpt-oss-120b";
   const body = {
     ...params,
     model,
