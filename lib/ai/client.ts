@@ -1,4 +1,16 @@
 import { getRequestContext } from "@cloudflare/next-on-pages";
+import type {
+  ChatMessage,
+  ChatCompletionParams,
+  ChatCompletion,
+} from "./types";
+
+export type {
+  ChatMessage,
+  ChatCompletionParams,
+  ChatCompletionChoice,
+  ChatCompletion,
+} from "./types";
 
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 const KEY_AMOUNT = "9";
@@ -34,45 +46,6 @@ function getNextApiKey(): string {
   const key = keys[currentKeyIndex % keys.length];
   currentKeyIndex = (currentKeyIndex + 1) % keys.length;
   return key;
-}
-
-export interface ChatMessage {
-  role: "system" | "user" | "assistant" | "tool";
-  content: string;
-}
-
-export interface ChatCompletionParams {
-  messages: ChatMessage[];
-  model?: string;
-  temperature?: number;
-  max_tokens?: number;
-  top_p?: number;
-  stream?: boolean;
-  reasoning_effort?: string;
-  [key: string]: unknown;
-}
-
-export interface ChatCompletionChoice {
-  index: number;
-  message: {
-    role: string;
-    content: string;
-    reasoning?: string;
-  };
-  finish_reason: string;
-}
-
-export interface ChatCompletion {
-  id: string;
-  object: string;
-  created: number;
-  model: string;
-  choices: ChatCompletionChoice[];
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
 }
 
 async function fetchWithKeyFallback(
