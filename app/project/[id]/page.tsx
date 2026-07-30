@@ -301,7 +301,6 @@ export default function ProjectChatPage() {
 
       <div style={styles.topbar}>
         <div style={styles.topbarLeft}>
-          <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIcon} />
           <span style={styles.brandText}>
             Galaxium <span className="rainbow-v2" style={{ fontWeight: 800 }}>V2</span>
           </span>
@@ -342,7 +341,6 @@ export default function ProjectChatPage() {
               </div>
             ) : messages.length === 0 ? (
               <div style={styles.centerInChat}>
-                <div style={styles.emptyIcon}>✦</div>
                 <p style={styles.emptyTitle}>Start a conversation</p>
                 <p style={styles.emptySubtitle}>
                   Ask anything about <strong style={{ color: "#e4e4e8" }}>{project?.name}</strong>
@@ -356,9 +354,6 @@ export default function ProjectChatPage() {
                     className={msg.role === "assistant" ? "msg-assistant" : undefined}
                     style={msg.role === "user" ? styles.userRow : styles.assistantRow}
                   >
-                    {msg.role === "assistant" && (
-                      <div style={styles.assistantAvatar}>✦</div>
-                    )}
                     <div
                       style={msg.role === "user" ? styles.userBubble : styles.assistantBubble}
                       className={
@@ -443,11 +438,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
     minWidth: 0,
     flex: "0 0 auto",
-  },
-  brandIcon: {
-    width: 22,
-    height: 22,
-    objectFit: "contain",
   },
   brandText: {
     color: "#ffffff",
@@ -604,7 +594,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     wordBreak: "break-word",
   },
   assistantBubble: {
-    maxWidth: "calc(100% - 38px)",
+    maxWidth: "100%",
     color: "#e4e4e8",
     fontSize: 14,
     lineHeight: 1.75,
