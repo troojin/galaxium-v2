@@ -301,6 +301,7 @@ export default function ProjectChatPage() {
 
       <div style={styles.topbar}>
         <div style={styles.topbarLeft}>
+          <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIcon} />
           <span style={styles.brandText}>
             Galaxium <span className="rainbow-v2" style={{ fontWeight: 800 }}>V2</span>
           </span>
@@ -438,6 +439,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 10,
     minWidth: 0,
     flex: "0 0 auto",
+  },
+  brandIcon: {
+    width: 22,
+    height: 22,
+    objectFit: "contain",
   },
   brandText: {
     color: "#ffffff",

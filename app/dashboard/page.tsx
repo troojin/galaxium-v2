@@ -465,7 +465,10 @@ export default function DashboardPage() {
               <div
                 key={project.id}
                 className="glass-sheen project-card"
-                style={styles.card}
+                style={{
+                  ...styles.card,
+                  zIndex: openMenuId === project.id ? 20 : 1,
+                }}
                 onClick={() => router.push(`/project/${project.id}`)}
               >
                 <div style={styles.cardBody}>
@@ -482,7 +485,7 @@ export default function DashboardPage() {
                       </button>
                       {openMenuId === project.id && (
                         <div
-                          className="glass-sheen card-dropdown"
+                          className="card-dropdown"
                           style={styles.cardDropdown}
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -523,6 +526,8 @@ export default function DashboardPage() {
                   ...styles.listRow,
                   borderBottom:
                     i === filtered.length - 1 ? "none" : "1px solid rgba(255,255,255,0.06)",
+                  position: "relative",
+                  zIndex: openMenuId === project.id ? 20 : 1,
                 }}
                 onClick={() => router.push(`/project/${project.id}`)}
               >
@@ -542,7 +547,7 @@ export default function DashboardPage() {
                     </button>
                     {openMenuId === project.id && (
                       <div
-                        className="glass-sheen card-dropdown"
+                        className="card-dropdown"
                         style={{ ...styles.cardDropdown, right: 0, left: "auto" }}
                         onClick={(e) => e.stopPropagation()}
                       >
