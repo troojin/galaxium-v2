@@ -46,6 +46,21 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
+  // Card menu (3-dot) state
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Rename modal state
+  const [renameTarget, setRenameTarget] = useState<Project | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
+
+  // Delete confirm modal state
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const brandRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -102,6 +117,27 @@ export default function DashboardPage() {
     };
   }, [checkingAuth, supabase]);
 
+  // Close the 3-dot menu on outside click / Escape
+  useEffect(() => {
+    if (!openMenuId) return;
+
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpenMenuId(null);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [openMenuId]);
+
   const filtered = projects.filter((p) =>
     p.name.toLowerCase().includes(query.trim().toLowerCase())
   );
@@ -157,6 +193,100 @@ export default function DashboardPage() {
     toast.success(`"${trimmed}" created`);
   }
 
+  function handleCardMenuToggle(e: React.MouseEvent, projectId: string) {
+    e.stopPropagation();
+    setOpenMenuId((prev) => (prev === projectId ? null : projectId));
+  }
+
+  function openRenameModal(e: React.MouseEvent, project: Project) {
+    e.stopPropagation();
+    setOpenMenuId(null);
+    setRenameTarget(project);
+    setRenameValue(project.name);
+    setRenameError(null);
+  }
+
+  function closeRenameModal() {
+    if (renaming) return;
+    setRenameTarget(null);
+  }
+
+  async function handleRename(e: React.FormEvent) {
+    e.preventDefault();
+    if (!renameTarget) return;
+
+    const trimmed = renameValue.trim();
+    if (!trimmed) {
+      setRenameError("Give your project a name.");
+      return;
+    }
+
+    if (trimmed === renameTarget.name) {
+      setRenameTarget(null);
+      return;
+    }
+
+    setRenaming(true);
+    setRenameError(null);
+
+    const { data, error } = await supabase
+      .from("projects")
+      .update({ name: trimmed })
+      .eq("id", renameTarget.id)
+      .select("id, name, updated_at")
+      .single();
+
+    setRenaming(false);
+
+    if (error) {
+      setRenameError(error.message);
+      toast.error("Couldn't rename the project.");
+      return;
+    }
+
+    setProjects((prev) =>
+      prev.map((p) => (p.id === renameTarget.id ? (data as Project) : p))
+    );
+    setRenameTarget(null);
+    toast.success(`Renamed to "${trimmed}"`);
+  }
+
+  function openDeleteModal(e: React.MouseEvent, project: Project) {
+    e.stopPropagation();
+    setOpenMenuId(null);
+    setDeleteTarget(project);
+    setDeleteError(null);
+  }
+
+  function closeDeleteModal() {
+    if (deleting) return;
+    setDeleteTarget(null);
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    const { error } = await supabase
+      .from("projects")
+      .delete()
+      .eq("id", deleteTarget.id);
+
+    setDeleting(false);
+
+    if (error) {
+      setDeleteError(error.message);
+      toast.error("Couldn't delete the project.");
+      return;
+    }
+
+    setProjects((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+    setDeleteTarget(null);
+    toast.success(`"${deleteTarget.name}" deleted`);
+  }
+
   if (checkingAuth) {
     return <div style={styles.page} />;
   }
@@ -207,11 +337,30 @@ export default function DashboardPage() {
         .view-toggle-btn {
           transition: background 0.15s ease, color 0.15s ease;
         }
+        .card-menu-btn {
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .card-menu-btn:hover {
+          background: rgba(255,255,255,0.08) !important;
+          color: #ffffff !important;
+        }
+        .card-menu-item {
+          transition: background 0.12s ease;
+        }
+        .card-menu-item:hover {
+          background: rgba(255,255,255,0.06);
+        }
+        .card-menu-item.danger:hover {
+          background: rgba(248,113,113,0.1);
+        }
         .modal-overlay {
           animation: fadeIn 0.15s ease;
         }
         .modal-card {
           animation: modalIn 0.18s ease;
+        }
+        .card-dropdown {
+          animation: dropdownIn 0.12s ease;
         }
         .rainbow-v2 {
           background: linear-gradient(90deg, #ff5f6d, #ffc371, #a8e063, #56ccf2, #8b5cf6, #ff5f6d);
@@ -232,6 +381,10 @@ export default function DashboardPage() {
         }
         @keyframes modalIn {
           from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes dropdownIn {
+          from { opacity: 0; transform: translateY(-4px) scale(0.97); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
       `}</style>
@@ -316,7 +469,41 @@ export default function DashboardPage() {
                 onClick={() => router.push(`/project/${project.id}`)}
               >
                 <div style={styles.cardBody}>
-                  <h3 style={styles.cardName}>{project.name}</h3>
+                  <div style={styles.cardTopRow}>
+                    <h3 style={styles.cardName}>{project.name}</h3>
+                    <div style={styles.menuWrap} ref={openMenuId === project.id ? menuRef : null}>
+                      <button
+                        className="card-menu-btn"
+                        style={styles.cardMenuBtn}
+                        onClick={(e) => handleCardMenuToggle(e, project.id)}
+                        aria-label="Project options"
+                      >
+                        ⋯
+                      </button>
+                      {openMenuId === project.id && (
+                        <div
+                          className="glass-sheen card-dropdown"
+                          style={styles.cardDropdown}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            className="card-menu-item"
+                            style={styles.cardMenuItem}
+                            onClick={(e) => openRenameModal(e, project)}
+                          >
+                            Rename
+                          </button>
+                          <button
+                            className="card-menu-item danger"
+                            style={{ ...styles.cardMenuItem, color: "#f87171" }}
+                            onClick={(e) => openDeleteModal(e, project)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   <p style={styles.cardUpdated}>Updated {timeAgo(project.updated_at)}</p>
                 </div>
               </div>
@@ -344,6 +531,38 @@ export default function DashboardPage() {
                 </div>
                 <div style={styles.listRight}>
                   <span style={styles.listUpdated}>{timeAgo(project.updated_at)}</span>
+                  <div style={styles.menuWrap} ref={openMenuId === project.id ? menuRef : null}>
+                    <button
+                      className="card-menu-btn"
+                      style={styles.cardMenuBtn}
+                      onClick={(e) => handleCardMenuToggle(e, project.id)}
+                      aria-label="Project options"
+                    >
+                      ⋯
+                    </button>
+                    {openMenuId === project.id && (
+                      <div
+                        className="glass-sheen card-dropdown"
+                        style={{ ...styles.cardDropdown, right: 0, left: "auto" }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          className="card-menu-item"
+                          style={styles.cardMenuItem}
+                          onClick={(e) => openRenameModal(e, project)}
+                        >
+                          Rename
+                        </button>
+                        <button
+                          className="card-menu-item danger"
+                          style={{ ...styles.cardMenuItem, color: "#f87171" }}
+                          onClick={(e) => openDeleteModal(e, project)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -402,6 +621,83 @@ export default function DashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {renameTarget && (
+        <div className="modal-overlay" style={styles.modalOverlay} onClick={closeRenameModal}>
+          <div
+            className="glass-sheen modal-card"
+            style={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={styles.modalTitle}>Rename project</h2>
+            <p style={styles.modalSubtitle}>Choose a new name for &quot;{renameTarget.name}&quot;.</p>
+            <form onSubmit={handleRename}>
+              <input
+                autoFocus
+                type="text"
+                placeholder="my-awesome-project"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                style={styles.modalInput}
+                disabled={renaming}
+              />
+              {renameError && <p style={styles.modalError}>{renameError}</p>}
+              <div style={styles.modalActions}>
+                <button
+                  type="button"
+                  onClick={closeRenameModal}
+                  style={styles.modalCancelBtn}
+                  disabled={renaming}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="primary-btn"
+                  style={styles.modalCreateBtn}
+                  disabled={renaming}
+                >
+                  {renaming ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="modal-overlay" style={styles.modalOverlay} onClick={closeDeleteModal}>
+          <div
+            className="glass-sheen modal-card"
+            style={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={styles.modalTitle}>Delete project</h2>
+            <p style={styles.modalSubtitle}>
+              Are you sure you want to delete &quot;{deleteTarget.name}&quot;? This can&apos;t be undone.
+            </p>
+            {deleteError && <p style={styles.modalError}>{deleteError}</p>}
+            <div style={styles.modalActions}>
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                style={styles.modalCancelBtn}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                style={styles.modalDeleteBtn}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting…" : "Delete project"}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -539,7 +835,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     backdropFilter: "blur(24px) saturate(140%)",
     WebkitBackdropFilter: "blur(24px) saturate(140%)",
     boxShadow: "0 12px 32px -12px rgba(0,0,0,0.7)",
-    overflow: "hidden",
+    overflow: "visible",
     display: "flex",
     flexDirection: "column",
   },
@@ -548,6 +844,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     flex: 1,
     display: "flex",
     flexDirection: "column",
+  },
+  cardTopRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
   },
   cardName: {
     color: "#ffffff",
@@ -560,6 +862,51 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 12.5,
     margin: "auto 0 0",
     paddingTop: 10,
+  },
+  menuWrap: {
+    position: "relative",
+    flexShrink: 0,
+  },
+  cardMenuBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#6b6b74",
+    borderRadius: 7,
+    width: 28,
+    height: 28,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 16,
+    lineHeight: 1,
+    cursor: "pointer",
+  },
+  cardDropdown: {
+    position: "absolute",
+    top: "calc(100% + 6px)",
+    right: 0,
+    left: "auto",
+    minWidth: 150,
+    background: "linear-gradient(160deg, rgba(20,20,22,0.98) 0%, rgba(8,8,10,0.98) 100%)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 10,
+    boxShadow: "0 16px 40px -8px rgba(0,0,0,0.85)",
+    padding: 5,
+    zIndex: 50,
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+  },
+  cardMenuItem: {
+    background: "transparent",
+    border: "none",
+    color: "#e5e5ea",
+    borderRadius: 7,
+    padding: "8px 10px",
+    fontSize: 13.5,
+    fontWeight: 500,
+    textAlign: "left",
+    cursor: "pointer",
   },
   newProjectCard: {
     display: "flex",
@@ -591,7 +938,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     backdropFilter: "blur(24px) saturate(140%)",
     WebkitBackdropFilter: "blur(24px) saturate(140%)",
     boxShadow: "0 12px 32px -12px rgba(0,0,0,0.7)",
-    overflow: "hidden",
+    overflow: "visible",
   },
   listRow: {
     display: "flex",
@@ -713,5 +1060,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 600,
     cursor: "pointer",
     boxShadow: "0 4px 16px rgba(91,33,182,0.4), inset 0 0.5px 0 rgba(255,255,255,0.2)",
+  },
+  modalDeleteBtn: {
+    background: "linear-gradient(160deg, rgba(220,38,38,0.85) 0%, rgba(153,27,27,0.85) 100%)",
+    color: "#ffffff",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 10,
+    padding: "9px 18px",
+    fontSize: 13.5,
+    fontWeight: 600,
+    cursor: "pointer",
+    boxShadow: "0 4px 16px rgba(153,27,27,0.4), inset 0 0.5px 0 rgba(255,255,255,0.2)",
   },
 };
