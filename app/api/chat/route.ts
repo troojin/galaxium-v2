@@ -10,14 +10,16 @@ const SYSTEM_PROMPT: ChatMessage = {
     "You are Galaxium AI, a helpful conversational assistant. Answer naturally, keep context from the chat history, and ask brief follow-up questions when useful.",
 };
 
+const MAX_HISTORY_MESSAGES = 30;
+
 function cleanMessages(messages: ChatMessage[]): ChatMessage[] {
   return messages
-    .filter((message) =>
-      ["user", "assistant", "system"].includes(message.role) &&
-      typeof message.content === "string" &&
-      message.content.trim().length > 0
+    .filter(
+      (message) =>
+        ["user", "assistant", "system"].includes(message.role) &&
+        typeof message.content === "string" &&
+        message.content.trim().length > 0
     )
-    .slice(-30)
     .map((message) => ({
       role: message.role,
       content: message.content.trim(),
@@ -49,7 +51,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify Project Ownership
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .select("id")
@@ -64,9 +65,46 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const chatMessages = cleanMessages(messages);
+    const cleanedIncoming = cleanMessages(messages);
+    const latestUserMessage = cleanedIncoming.at(-1);
 
-    if (chatMessages.length === 0 || chatMessages.at(-1)?.role !== "user") {
+    if (!latestUserMessage || latestUserMessage.role !== "user") {
+      return new Response(
+        JSON.stringify({ error: "Send a user message to start chatting" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: history, error: historyError } = await supabase
+      .from("messages")
+      .select("role, content, created_at")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: true })
+      .limit(200);
+
+    if (historyError) {
+      return new Response(
+        JSON.stringify({ error: "Couldn't load conversation history" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const dbMessages = cleanMessages((history ?? []) as ChatMessage[]);
+    const lastDbMessage = dbMessages.at(-1);
+    const alreadyPersisted =
+      lastDbMessage?.role === "user" &&
+      lastDbMessage.content === latestUserMessage.content;
+
+    const fullHistory = alreadyPersisted
+      ? dbMessages
+      : [...dbMessages, latestUserMessage];
+
+    let trimmed = fullHistory.slice(-MAX_HISTORY_MESSAGES);
+    while (trimmed.length > 1 && trimmed[0].role !== "user") {
+      trimmed = trimmed.slice(1);
+    }
+
+    if (trimmed.length === 0 || trimmed.at(-1)?.role !== "user") {
       return new Response(
         JSON.stringify({ error: "Send a user message to start chatting" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
@@ -74,7 +112,7 @@ export async function POST(req: NextRequest) {
     }
 
     const groqRes = await createChatCompletionStream({
-      messages: [SYSTEM_PROMPT, ...chatMessages],
+      messages: [SYSTEM_PROMPT, ...trimmed],
       temperature: 0.7,
       max_tokens: 1024,
     });
