@@ -30,24 +30,62 @@ export default function SignupPage() {
       setCheckingSession(false);
     };
     checkSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const cleanUsername = username.trim();
+    const cleanEmail = email.trim();
+
+    if (!cleanUsername) {
+      toast.error("Please enter a username.");
+      return;
+    }
+
+    if (!cleanEmail) {
+      toast.error("Please enter an email address.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    if (!password) {
+      toast.error("Please enter a password.");
+      return;
+    }
+
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (!confirmPassword) {
+      toast.error("Please confirm your password.");
+      return;
+    }
 
     if (password !== confirmPassword) {
       toast.error("Passwords don't match.");
       return;
     }
 
+    if (!agreed) {
+      toast.error("You must agree to the Terms of Service and Privacy Policy.");
+      return;
+    }
+
     setLoading(true);
 
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: cleanEmail,
       password,
       options: {
-        data: { username },
+        data: { username: cleanUsername },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -180,7 +218,7 @@ export default function SignupPage() {
             <h1 style={styles.title}>Create your account</h1>
             <p style={styles.subtitle}>Get started in just a minute</p>
 
-            <form onSubmit={handleSubmit} style={styles.form}>
+            <form onSubmit={handleSubmit} style={styles.form} noValidate>
               <div style={styles.fieldGroup}>
                 <label style={styles.label}>Username</label>
                 <input
@@ -189,7 +227,7 @@ export default function SignupPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   style={styles.input}
-                  required
+                  disabled={loading}
                 />
               </div>
 
@@ -201,7 +239,7 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={styles.input}
-                  required
+                  disabled={loading}
                 />
               </div>
 
@@ -214,14 +252,14 @@ export default function SignupPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     style={{ ...styles.input, paddingRight: 44 }}
-                    required
-                    minLength={8}
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((s) => !s)}
                     style={styles.eyeBtn}
                     aria-label={showPassword ? "Hide password" : "Show password"}
+                    disabled={loading}
                   >
                     {showPassword ? "🙈" : "👁"}
                   </button>
@@ -236,8 +274,7 @@ export default function SignupPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   style={styles.input}
-                  required
-                  minLength={8}
+                  disabled={loading}
                 />
               </div>
 
@@ -246,7 +283,7 @@ export default function SignupPage() {
                   type="checkbox"
                   checked={agreed}
                   onChange={(e) => setAgreed(e.target.checked)}
-                  required
+                  disabled={loading}
                 />
                 <span style={styles.checkboxLabel}>
                   I agree to the <a href="#" style={styles.link}>Terms of Service</a> and{" "}
@@ -258,7 +295,7 @@ export default function SignupPage() {
                 type="submit"
                 className="primary-btn"
                 style={styles.submitBtn}
-                disabled={loading || !agreed}
+                disabled={loading}
               >
                 {loading ? "Creating account…" : "Create account"}
               </button>
@@ -377,11 +414,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 13,
     textDecoration: "none",
     fontWeight: 500,
-  },
-  errorText: {
-    color: "#f87171",
-    fontSize: 13,
-    margin: "-6px 0 0",
   },
   submitBtn: {
     marginTop: 6,
