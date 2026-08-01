@@ -48,7 +48,15 @@ export default function TermsPage() {
 
         <footer style={styles.footer}>
           <p style={styles.footerText}>
-            Have questions? <a href="/about" style={styles.link}>Learn more about us</a>
+            Have any questions? Ask them in{" "}
+            <a
+              href="https://dsc.gg/glxm"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.link}
+            >
+              dsc.gg/glxm
+            </a>
           </p>
         </footer>
       </div>
