@@ -43,7 +43,7 @@ export default function Home() {
 
         <h1 style={styles.title}>We&apos;re Almost Finished! 🚀</h1>
         <p style={styles.subtitle}>
-          We&apos;re putting the final touches on everything. It won&apos;t be long now—join our community for live updates and announcements.
+          We&apos;re putting the final touches on everything. It won&apos;t be long now. Join our community for live updates and announcements.
         </p>
 
         <a
