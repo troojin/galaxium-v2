@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 
-
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -27,21 +26,38 @@ export default function LoginPage() {
       setCheckingSession(false);
     };
     checkSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email.trim() || !password) {
-      toast.error("Please fill in both fields.");
+    const cleanEmail = email.trim();
+
+    if (!cleanEmail && !password) {
+      toast.error("Please enter your email and password.");
+      return;
+    }
+
+    if (!cleanEmail) {
+      toast.error("Please enter your email address.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    if (!password) {
+      toast.error("Please enter your password.");
       return;
     }
 
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
+      email: cleanEmail,
       password,
     });
 
@@ -52,7 +68,7 @@ export default function LoginPage() {
       return;
     }
 
-    toast.success("Signed in");
+    toast.success("Signed in successfully!");
     router.push("/dashboard");
     router.refresh();
   };
@@ -94,7 +110,7 @@ export default function LoginPage() {
         <h1 style={styles.title}>Welcome back</h1>
         <p style={styles.subtitle}>Sign in to continue to your account</p>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
+        <form onSubmit={handleSubmit} style={styles.form} noValidate>
           <div style={styles.fieldGroup}>
             <label style={styles.label}>Email</label>
             <input
@@ -104,7 +120,6 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               style={styles.input}
               disabled={loading}
-              required
             />
           </div>
 
@@ -118,7 +133,6 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 style={{ ...styles.input, paddingRight: 44 }}
                 disabled={loading}
-                required
               />
               <button
                 type="button"
@@ -246,11 +260,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 13,
     textDecoration: "none",
     fontWeight: 500,
-  },
-  errorText: {
-    color: "#f87171",
-    fontSize: 13,
-    margin: "-6px 0 0",
   },
   submitBtn: {
     marginTop: 6,
