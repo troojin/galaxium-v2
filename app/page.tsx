@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 
 export default function Home() {
   return (
@@ -30,17 +29,6 @@ export default function Home() {
       `}</style>
 
       <div className="glass-sheen" style={styles.card}>
-        <div style={styles.logoWrap}>
-          <Image
-            src="/icons/icon.png"
-            alt="Logo"
-            width={64}
-            height={64}
-            priority
-            style={styles.logo}
-          />
-        </div>
-
         <h1 style={styles.title}>We&apos;re Almost Finished! 🚀</h1>
         <p style={styles.subtitle}>
           We&apos;re putting the final touches on everything. It won&apos;t be long now. Join our community for live updates and announcements.
@@ -89,15 +77,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexDirection: "column",
     alignItems: "center",
     textAlign: "center",
-  },
-  logoWrap: {
-    marginBottom: 20,
-    display: "flex",
-    justifyContent: "center",
-  },
-  logo: {
-    borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.1)",
   },
   title: {
     color: "#ffffff",
