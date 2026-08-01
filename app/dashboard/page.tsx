@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
+import LoadingScreen from "@/components/loading";
 
 interface Project {
   id: string;
@@ -455,25 +456,90 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {!error && !loading && filtered.length === 0 && projects.length > 0 ? (
-          <div className="glass-sheen" style={styles.emptyState}>
-            <p style={styles.emptyText}>No projects match &quot;{query}&quot;</p>
-          </div>
-        ) : view === "grid" ? (
-          <div style={styles.grid}>
-            {filtered.map((project) => (
-              <div
-                key={project.id}
-                className="glass-sheen project-card"
-                style={{
-                  ...styles.card,
-                  zIndex: openMenuId === project.id ? 20 : 1,
-                }}
-                onClick={() => router.push(`/project/${project.id}`)}
-              >
-                <div style={styles.cardBody}>
-                  <div style={styles.cardTopRow}>
-                    <h3 style={styles.cardName}>{project.name}</h3>
+        <div style={{ position: "relative", minHeight: loading ? 240 : undefined }}>
+          {loading ? (
+            <LoadingScreen fullScreen={false} message="Loading projects…" />
+          ) : !error && filtered.length === 0 && projects.length > 0 ? (
+            <div className="glass-sheen" style={styles.emptyState}>
+              <p style={styles.emptyText}>No projects match &quot;{query}&quot;</p>
+            </div>
+          ) : view === "grid" ? (
+            <div style={styles.grid}>
+              {filtered.map((project) => (
+                <div
+                  key={project.id}
+                  className="glass-sheen project-card"
+                  style={{
+                    ...styles.card,
+                    zIndex: openMenuId === project.id ? 20 : 1,
+                  }}
+                  onClick={() => router.push(`/project/${project.id}`)}
+                >
+                  <div style={styles.cardBody}>
+                    <div style={styles.cardTopRow}>
+                      <h3 style={styles.cardName}>{project.name}</h3>
+                      <div style={styles.menuWrap} ref={openMenuId === project.id ? menuRef : null}>
+                        <button
+                          className="card-menu-btn"
+                          style={styles.cardMenuBtn}
+                          onClick={(e) => handleCardMenuToggle(e, project.id)}
+                          aria-label="Project options"
+                        >
+                          ⋯
+                        </button>
+                        {openMenuId === project.id && (
+                          <div
+                            className="card-dropdown"
+                            style={styles.cardDropdown}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              className="card-menu-item"
+                              style={styles.cardMenuItem}
+                              onClick={(e) => openRenameModal(e, project)}
+                            >
+                              Rename
+                            </button>
+                            <button
+                              className="card-menu-item danger"
+                              style={{ ...styles.cardMenuItem, color: "#f87171" }}
+                              onClick={(e) => openDeleteModal(e, project)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <p style={styles.cardUpdated}>Updated {timeAgo(project.updated_at)}</p>
+                  </div>
+                </div>
+              ))}
+              <div className="new-project-card" style={styles.newProjectCard} onClick={openModal}>
+                <span style={styles.newProjectPlus}>+</span>
+                <span style={styles.newProjectLabel}>New project</span>
+              </div>
+            </div>
+          ) : (
+            <div className="glass-sheen" style={styles.listWrap}>
+              {filtered.map((project, i) => (
+                <div
+                  key={project.id}
+                  className="project-card"
+                  style={{
+                    ...styles.listRow,
+                    borderBottom:
+                      i === filtered.length - 1 ? "none" : "1px solid rgba(255,255,255,0.06)",
+                    position: "relative",
+                    zIndex: openMenuId === project.id ? 20 : 1,
+                  }}
+                  onClick={() => router.push(`/project/${project.id}`)}
+                >
+                  <div style={styles.listLeft}>
+                    <p style={styles.listName}>{project.name}</p>
+                  </div>
+                  <div style={styles.listRight}>
+                    <span style={styles.listUpdated}>{timeAgo(project.updated_at)}</span>
                     <div style={styles.menuWrap} ref={openMenuId === project.id ? menuRef : null}>
                       <button
                         className="card-menu-btn"
@@ -486,7 +552,7 @@ export default function DashboardPage() {
                       {openMenuId === project.id && (
                         <div
                           className="card-dropdown"
-                          style={styles.cardDropdown}
+                          style={{ ...styles.cardDropdown, right: 0, left: "auto" }}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
@@ -507,80 +573,19 @@ export default function DashboardPage() {
                       )}
                     </div>
                   </div>
-                  <p style={styles.cardUpdated}>Updated {timeAgo(project.updated_at)}</p>
                 </div>
-              </div>
-            ))}
-            <div className="new-project-card" style={styles.newProjectCard} onClick={openModal}>
-              <span style={styles.newProjectPlus}>+</span>
-              <span style={styles.newProjectLabel}>New project</span>
-            </div>
-          </div>
-        ) : (
-          <div className="glass-sheen" style={styles.listWrap}>
-            {filtered.map((project, i) => (
+              ))}
               <div
-                key={project.id}
-                className="project-card"
-                style={{
-                  ...styles.listRow,
-                  borderBottom:
-                    i === filtered.length - 1 ? "none" : "1px solid rgba(255,255,255,0.06)",
-                  position: "relative",
-                  zIndex: openMenuId === project.id ? 20 : 1,
-                }}
-                onClick={() => router.push(`/project/${project.id}`)}
+                className="new-project-card"
+                style={{ ...styles.newProjectCard, borderRadius: 0, borderTop: "1px solid rgba(255,255,255,0.06)", border: "none", borderTopWidth: 1 }}
+                onClick={openModal}
               >
-                <div style={styles.listLeft}>
-                  <p style={styles.listName}>{project.name}</p>
-                </div>
-                <div style={styles.listRight}>
-                  <span style={styles.listUpdated}>{timeAgo(project.updated_at)}</span>
-                  <div style={styles.menuWrap} ref={openMenuId === project.id ? menuRef : null}>
-                    <button
-                      className="card-menu-btn"
-                      style={styles.cardMenuBtn}
-                      onClick={(e) => handleCardMenuToggle(e, project.id)}
-                      aria-label="Project options"
-                    >
-                      ⋯
-                    </button>
-                    {openMenuId === project.id && (
-                      <div
-                        className="card-dropdown"
-                        style={{ ...styles.cardDropdown, right: 0, left: "auto" }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          className="card-menu-item"
-                          style={styles.cardMenuItem}
-                          onClick={(e) => openRenameModal(e, project)}
-                        >
-                          Rename
-                        </button>
-                        <button
-                          className="card-menu-item danger"
-                          style={{ ...styles.cardMenuItem, color: "#f87171" }}
-                          onClick={(e) => openDeleteModal(e, project)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <span style={styles.newProjectPlus}>+</span>
+                <span style={styles.newProjectLabel}>New project</span>
               </div>
-            ))}
-            <div
-              className="new-project-card"
-              style={{ ...styles.newProjectCard, borderRadius: 0, borderTop: "1px solid rgba(255,255,255,0.06)", border: "none", borderTopWidth: 1 }}
-              onClick={openModal}
-            >
-              <span style={styles.newProjectPlus}>+</span>
-              <span style={styles.newProjectLabel}>New project</span>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {showModal && (
