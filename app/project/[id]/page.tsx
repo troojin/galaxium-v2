@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
+import Topbar from "@/components/topbars";
 
 interface Project {
   id: string;
@@ -265,19 +266,6 @@ export default function ProjectChatPage() {
           box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.25), inset 0 -0.5px 0 rgba(255,255,255,0.03);
           pointer-events: none;
         }
-        .rainbow-v2 {
-          background: linear-gradient(90deg, #ff5f6d, #ffc371, #a8e063, #56ccf2, #8b5cf6, #ff5f6d);
-          background-size: 300% 100%;
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          color: transparent;
-          animation: rainbowShift 4s linear infinite;
-        }
-        @keyframes rainbowShift {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 300% 50%; }
-        }
         .msg-assistant { animation: msgIn 0.18s ease; }
         @keyframes msgIn {
           from { opacity: 0; transform: translateY(6px); }
@@ -299,19 +287,11 @@ export default function ProjectChatPage() {
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
       `}</style>
 
-      <div style={styles.topbar}>
-        <div style={styles.topbarLeft}>
-          <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIcon} />
-          <span style={styles.brandText}>
-            Galaxium <span className="rainbow-v2" style={{ fontWeight: 800 }}>V2</span>
-          </span>
-        </div>
-        {project && (
-          <div style={styles.topbarCenter}>
-            <span style={styles.projectName}>{project.name}</span>
-          </div>
-        )}
-        <div style={styles.topbarRight}>
+      <Topbar
+        center={
+          project ? <span style={styles.projectName}>{project.name}</span> : undefined
+        }
+        right={
           <button
             className="back-link"
             style={styles.backBtn}
@@ -319,8 +299,8 @@ export default function ProjectChatPage() {
           >
             ← Dashboard
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {loading ? (
         <div style={styles.centerState}>
@@ -419,45 +399,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     flexDirection: "column",
   },
-  topbar: {
-    position: "sticky",
-    top: 0,
-    zIndex: 100,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "14px 24px",
-    background: "rgba(10,10,10,0.75)",
-    backdropFilter: "blur(16px) saturate(140%)",
-    WebkitBackdropFilter: "blur(16px) saturate(140%)",
-    borderBottom: "1px solid rgba(255,255,255,0.06)",
-    gap: 16,
-  },
-  topbarLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    minWidth: 0,
-    flex: "0 0 auto",
-  },
-  brandIcon: {
-    width: 22,
-    height: 22,
-    objectFit: "contain",
-  },
-  brandText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: 600,
-    letterSpacing: "-0.01em",
-    whiteSpace: "nowrap",
-  },
-  topbarCenter: {
-    flex: 1,
-    display: "flex",
-    justifyContent: "center",
-    minWidth: 0,
-  },
   projectName: {
     color: "#d4d4dc",
     fontSize: 13.5,
@@ -467,11 +408,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     overflow: "hidden",
     textOverflow: "ellipsis",
     maxWidth: 320,
-  },
-  topbarRight: {
-    flex: "0 0 auto",
-    display: "flex",
-    alignItems: "center",
   },
   backBtn: {
     background: "none",
