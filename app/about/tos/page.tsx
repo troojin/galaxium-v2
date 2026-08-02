@@ -9,7 +9,7 @@ interface Section {
   list?: string[];
 }
 
-interface Guidelines {
+interface PolicyDoc {
   lastUpdated: string;
   sections: Section[];
   footer: {
@@ -19,7 +19,12 @@ interface Guidelines {
   };
 }
 
-const data = guidelines as Guidelines;
+interface Guidelines {
+  terms: PolicyDoc;
+  privacy: PolicyDoc;
+}
+
+const data = (guidelines as Guidelines).terms;
 
 export default function TermsPage() {
   return (
