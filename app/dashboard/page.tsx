@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 import LoadingScreen from "@/components/loading";
-import Topbar from "@/components/topbar";
 
 interface Project {
   id: string;
@@ -62,6 +61,8 @@ export default function DashboardPage() {
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const brandRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -362,6 +363,19 @@ export default function DashboardPage() {
         .card-dropdown {
           animation: dropdownIn 0.12s ease;
         }
+        .rainbow-v2 {
+          background: linear-gradient(90deg, #ff5f6d, #ffc371, #a8e063, #56ccf2, #8b5cf6, #ff5f6d);
+          background-size: 300% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          color: transparent;
+          animation: rainbowShift 4s linear infinite;
+        }
+        @keyframes rainbowShift {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 300% 50%; }
+        }
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -376,7 +390,14 @@ export default function DashboardPage() {
         }
       `}</style>
 
-      <Topbar />
+      <div style={styles.topbar}>
+        <div ref={brandRef} style={styles.brandWrap}>
+          <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIconImg} />
+          <span style={styles.brandInlineText}>
+            Galaxium <span className="rainbow-v2" style={styles.rainbowV2}>V2</span>
+          </span>
+        </div>
+      </div>
 
       <div style={styles.container}>
         <div style={styles.headerRow}>
@@ -700,6 +721,40 @@ const styles: { [key: string]: React.CSSProperties } = {
     width: "100%",
     background: "#0a0a0a",
     padding: 0,
+  },
+  topbar: {
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    padding: "14px 24px",
+    background: "rgba(10,10,10,0.75)",
+    backdropFilter: "blur(16px) saturate(140%)",
+    WebkitBackdropFilter: "blur(16px) saturate(140%)",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+  },
+  brandWrap: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  },
+  brandIconImg: {
+    width: 22,
+    height: 22,
+    objectFit: "contain",
+  },
+  brandInlineText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: 600,
+    letterSpacing: "-0.01em",
+    whiteSpace: "nowrap",
+  },
+  rainbowV2: {
+    fontWeight: 800,
   },
   container: {
     maxWidth: 1080,
