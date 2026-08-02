@@ -1,6 +1,25 @@
 "use client";
 
 import React from "react";
+import guidelines from "../../data/guidelines.json";
+
+interface Section {
+  title: string;
+  paragraphs: string[];
+  list?: string[];
+}
+
+interface Guidelines {
+  lastUpdated: string;
+  sections: Section[];
+  footer: {
+    text: string;
+    linkText: string;
+    linkUrl: string;
+  };
+}
+
+const data = guidelines as Guidelines;
 
 export default function TermsPage() {
   return (
@@ -13,49 +32,41 @@ export default function TermsPage() {
       <div style={styles.container}>
         <header style={styles.header}>
           <h1 style={styles.title}>Terms of Service</h1>
-          <p style={styles.subtitle}>Last updated: August 1, 2026</p>
+          <p style={styles.subtitle}>Last updated: {data.lastUpdated}</p>
         </header>
 
         <main style={styles.content}>
-          <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>1. Acceptance of Terms</h2>
-            <p style={styles.paragraph}>
-              By creating an account or accessing our services, you agree to be bound by these Terms of Service. If you do not agree to all terms, please discontinue use immediately.
-            </p>
-          </section>
-
-          <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>2. Account Responsibilities</h2>
-            <p style={styles.paragraph}>
-              You are responsible for maintaining the confidentiality of your credentials and for all actions performed under your account. Notify us immediately of any unauthorized access.
-            </p>
-          </section>
-
-          <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>3. Acceptable Use</h2>
-            <p style={styles.paragraph}>
-              You agree not to exploit, disrupt, or attempt unauthorized access to our platform infrastructure, database systems, or underlying APIs.
-            </p>
-          </section>
-
-          <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>4. Account Termination</h2>
-            <p style={styles.paragraph}>
-              We reserve the right to suspend or terminate accounts that violate our terms or engage in behavior harmful to other users or our platform ecosystem.
-            </p>
-          </section>
+          {data.sections.map((section, i) => (
+            <section key={i} style={styles.section}>
+              <h2 style={styles.sectionTitle}>{section.title}</h2>
+              {section.paragraphs.map((p, j) => (
+                <p key={j} style={styles.paragraph}>
+                  {p}
+                </p>
+              ))}
+              {section.list && (
+                <ul style={styles.list}>
+                  {section.list.map((item, k) => (
+                    <li key={k} style={styles.listItem}>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          ))}
         </main>
 
         <footer style={styles.footer}>
           <p style={styles.footerText}>
-            Have any questions? Ask them in{" "}
+            {data.footer.text}{" "}
             <a
-              href="https://dsc.gg/glxm"
+              href={data.footer.linkUrl}
               target="_blank"
               rel="noopener noreferrer"
               style={styles.link}
             >
-              dsc.gg/glxm
+              {data.footer.linkText}
             </a>
           </p>
         </footer>
@@ -119,6 +130,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 15,
     lineHeight: 1.7,
     margin: 0,
+  },
+  list: {
+    margin: "4px 0 0",
+    paddingLeft: 20,
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+  },
+  listItem: {
+    color: "#9a9aa5",
+    fontSize: 15,
+    lineHeight: 1.7,
   },
   footer: {
     borderTop: "1px solid rgba(255,255,255,0.08)",
