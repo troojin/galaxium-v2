@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import guidelines from "../../data/guidelines.json";
+import guidelines from "../../../data/guidelines.json";
 
 interface Section {
   title: string;
