@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
-import Topbar from "@/components/topbars";
 
 interface Project {
   id: string;
@@ -287,11 +286,12 @@ export default function ProjectChatPage() {
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
       `}</style>
 
-      <Topbar
-        center={
-          project ? <span style={styles.projectName}>{project.name}</span> : undefined
-        }
-        right={
+      <header style={styles.topbar}>
+        <div style={styles.topbarSide} />
+        <div style={styles.topbarCenter}>
+          {project ? <span style={styles.projectName}>{project.name}</span> : null}
+        </div>
+        <div style={styles.topbarSide}>
           <button
             className="back-link"
             style={styles.backBtn}
@@ -299,8 +299,8 @@ export default function ProjectChatPage() {
           >
             ← Dashboard
           </button>
-        }
-      />
+        </div>
+      </header>
 
       {loading ? (
         <div style={styles.centerState}>
@@ -398,6 +398,33 @@ const styles: { [key: string]: React.CSSProperties } = {
     background: "#0a0a0a",
     display: "flex",
     flexDirection: "column",
+  },
+  topbar: {
+    height: 58,
+    width: "100%",
+    display: "grid",
+    gridTemplateColumns: "1fr auto 1fr",
+    alignItems: "center",
+    padding: "0 24px",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+    background: "rgba(10,10,10,0.82)",
+    backdropFilter: "blur(18px)",
+    WebkitBackdropFilter: "blur(18px)",
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
+  },
+  topbarCenter: {
+    minWidth: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topbarSide: {
+    minWidth: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
   },
   projectName: {
     color: "#d4d4dc",
