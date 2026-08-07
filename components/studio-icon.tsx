@@ -1,10 +1,10 @@
 import React from "react";
 
 const ICON_BASE = "/assistant/StudioIcons";
-const FALLBACK_ICON = "instance";
+const FALLBACK_ICON = "Instance";
 
 export function getStudioIconPath(className: string): string {
-  return `${ICON_BASE}/${className.toLowerCase()}.png`;
+  return `${ICON_BASE}/${className}.png`;
 }
 
 interface StudioIconProps {
