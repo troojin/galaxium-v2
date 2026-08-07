@@ -36,6 +36,52 @@ function isTruncatedJson(content: string): boolean {
   }
 }
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+const LUA_KEYWORDS = new Set([
+  "and", "break", "do", "else", "elseif", "end", "false", "for", "function",
+  "goto", "if", "in", "local", "nil", "not", "or", "repeat", "return", "then",
+  "true", "until", "while", "type", "export", "continue",
+]);
+
+const LUA_BUILTINS = new Set([
+  "game", "script", "workspace", "Instance", "Vector3", "Vector2", "CFrame",
+  "Color3", "wait", "task", "print", "warn", "error", "pairs", "ipairs",
+  "pcall", "xpcall", "typeof", "Enum", "UDim2", "UDim", "BrickColor",
+  "Random", "tick", "os", "string", "table", "math", "select", "unpack",
+  "require", "spawn", "delay", "coroutine",
+]);
+
+function highlightLua(code: string): string {
+  const escaped = escapeHtml(code);
+  const tokenRegex =
+    /(--\[\[[\s\S]*?\]\])|(--[^\n]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+\.?\d*\b)|(\b[A-Za-z_][A-Za-z0-9_]*\b)/gm;
+
+  return escaped.replace(tokenRegex, (match, blockComment, lineComment, str, num, word) => {
+    if (blockComment || lineComment) {
+      return `<span style="color:#6a6a74;font-style:italic;">${match}</span>`;
+    }
+    if (str) {
+      return `<span style="color:#a3d977;">${match}</span>`;
+    }
+    if (num) {
+      return `<span style="color:#e0af68;">${match}</span>`;
+    }
+    if (word) {
+      if (LUA_KEYWORDS.has(word)) {
+        return `<span style="color:#c792ea;font-weight:600;">${match}</span>`;
+      }
+      if (LUA_BUILTINS.has(word)) {
+        return `<span style="color:#82aaff;">${match}</span>`;
+      }
+      return match;
+    }
+    return match;
+  });
+}
+
 function flattenInstances(
   nodes: RobloxInstanceNode[]
 ): RobloxInstanceNode[] {
@@ -285,8 +331,8 @@ function ScriptPreviewModal({
   }
 
   return (
-    <div style={styles.modalOverlay} onClick={onClose}>
-      <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+    <div style={styles.modalOverlay} className="modal-overlay-in" onClick={onClose}>
+      <div style={styles.modalCard} className="modal-card-in" onClick={(e) => e.stopPropagation()}>
         <div style={styles.modalHeader}>
           <div style={styles.modalHeaderLeft}>
             <StudioIcon className={node.className} size={18} style={{ marginRight: 2 }} />
@@ -306,7 +352,7 @@ function ScriptPreviewModal({
         {node.parent ? <div style={styles.modalParent}>{node.parent}</div> : null}
         {hasSource ? (
           <pre style={styles.modalSourceBlock}>
-            <code>{node.source}</code>
+            <code dangerouslySetInnerHTML={{ __html: highlightLua(node.source ?? "") }} />
           </pre>
         ) : (
           <div style={styles.modalTypeWrap}>
@@ -338,7 +384,9 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
               return (
                 <button
                   key={i}
-                  onClick={() => setActiveScript(node)}
+                  onClick={() => {
+                    if (hasSource) setActiveScript(node);
+                  }}
                   className="created-item-script"
                   style={{ ...styles.createdItem, ...styles.createdItemScript }}
                 >
@@ -384,6 +432,8 @@ export default function ProjectChatPage() {
   const [streamingMsgIndex, setStreamingMsgIndex] = useState(0);
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesListRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -452,8 +502,16 @@ export default function ProjectChatPage() {
   }, [params.id, project, supabase]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!isNearBottomRef.current) return;
+    bottomRef.current?.scrollIntoView({ behavior: streaming ? "auto" : "smooth" });
   }, [messages, streaming]);
+
+  function handleMessagesScroll() {
+    const el = messagesListRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    isNearBottomRef.current = distanceFromBottom < 96;
+  }
 
   useEffect(() => {
     if (!streaming) return;
@@ -574,6 +632,7 @@ export default function ProjectChatPage() {
 
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    isNearBottomRef.current = true;
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -755,6 +814,21 @@ export default function ProjectChatPage() {
           from { opacity: 0; transform: translateY(2px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        .content-fade-in { animation: contentFadeIn 0.4s ease; }
+        @keyframes contentFadeIn {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .modal-overlay-in { animation: modalOverlayIn 0.18s ease; }
+        @keyframes modalOverlayIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .modal-card-in { animation: modalCardIn 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes modalCardIn {
+          from { opacity: 0; transform: scale(0.94) translateY(6px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
         .node-row:hover { background: rgba(255,255,255,0.03); }
         .source-toggle:hover { color: #c4b5fd !important; border-color: rgba(139,92,246,0.4) !important; }
         .created-item-script {
@@ -823,7 +897,7 @@ export default function ProjectChatPage() {
         </div>
       ) : (
         <div style={styles.chatLayout}>
-          <div style={styles.messagesList}>
+          <div style={styles.messagesList} ref={messagesListRef} onScroll={handleMessagesScroll}>
             {messagesLoading ? (
               <div style={styles.centerInChat}>
                 <p style={styles.mutedText}>Loading messages…</p>
@@ -865,34 +939,38 @@ export default function ProjectChatPage() {
                           <div style={styles.assistantBubble}>
                             {isStreamingThis ? (
                               <span key={streamingMsgIndex} className="streaming-text" style={styles.generatingText}>{streamingMessages[streamingMsgIndex]}</span>
-                            ) : parsed ? (
-                              <GalaxiumMessageView response={parsed} />
-                            ) : msg.content.trim().startsWith("{") && isTruncatedJson(msg.content) ? (
-                              <div style={styles.truncatedWrap}>
-                                <p style={styles.truncatedText}>
-                                  This response got cut off before it finished generating.
-                                </p>
-                                <button
-                                  type="button"
-                                  className="send-btn"
-                                  style={styles.truncatedRetryBtn}
-                                  onClick={() => retryMessage(msg.id)}
-                                  disabled={streaming}
-                                >
-                                  Retry
-                                </button>
-                              </div>
-                            ) : msg.content.trim().startsWith("{") ? (
-                              <div style={styles.rawFallbackWrap}>
-                                <div style={styles.sourceHeader}>
-                                  <span style={styles.sourceLang}>Unparsed response</span>
-                                </div>
-                                <pre style={styles.sourceBlock}>
-                                  <code>{msg.content}</code>
-                                </pre>
-                              </div>
                             ) : (
-                              msg.content
+                              <div className="content-fade-in">
+                                {parsed ? (
+                                  <GalaxiumMessageView response={parsed} />
+                                ) : msg.content.trim().startsWith("{") && isTruncatedJson(msg.content) ? (
+                                  <div style={styles.truncatedWrap}>
+                                    <p style={styles.truncatedText}>
+                                      This response got cut off before it finished generating.
+                                    </p>
+                                    <button
+                                      type="button"
+                                      className="send-btn"
+                                      style={styles.truncatedRetryBtn}
+                                      onClick={() => retryMessage(msg.id)}
+                                      disabled={streaming}
+                                    >
+                                      Retry
+                                    </button>
+                                  </div>
+                                ) : msg.content.trim().startsWith("{") ? (
+                                  <div style={styles.rawFallbackWrap}>
+                                    <div style={styles.sourceHeader}>
+                                      <span style={styles.sourceLang}>Unparsed response</span>
+                                    </div>
+                                    <pre style={styles.sourceBlock}>
+                                      <code>{msg.content}</code>
+                                    </pre>
+                                  </div>
+                                ) : (
+                                  msg.content
+                                )}
+                              </div>
                             )}
                           </div>
                           {!isStreamingThis ? (
