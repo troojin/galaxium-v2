@@ -70,7 +70,6 @@ function ScriptPreviewModal({
           <div style={styles.modalHeaderLeft}>
             <StudioIcon className={node.className} size={18} style={{ marginRight: 2 }} />
             <span style={styles.modalTitle}>{node.name}</span>
-            <span style={styles.nodeClass}>{node.className}</span>
           </div>
           <div style={styles.modalHeaderRight}>
             <button style={styles.copyBtn} onClick={handleCopy}>
@@ -115,7 +114,6 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
               >
                 <StudioIcon className={node.className} size={16} />
                 <span style={styles.createdItemName}>{node.name}</span>
-                <span style={styles.nodeClass}>{node.className}</span>
                 {hasSource ? <span style={styles.createdItemHint}>View →</span> : null}
               </button>
             );
@@ -140,7 +138,6 @@ export default function ProjectChatPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -161,14 +158,24 @@ export default function ProjectChatPage() {
         .eq("id", params.id)
         .maybeSingle();
       if (!isMounted) return;
-      if (error) toast.error("Couldn't load this project.");
-      else if (!data) setNotFound(true);
-      else setProject(data as Project);
+
+      if (error) {
+        toast.error("Couldn't load this project.");
+        router.replace("/dashboard");
+        return;
+      }
+      if (!data) {
+        toast.error("That project doesn't exist, or you don't have access.");
+        router.replace("/dashboard");
+        return;
+      }
+
+      setProject(data as Project);
       setLoading(false);
     }
     loadProject();
     return () => { isMounted = false; };
-  }, [params.id, supabase]);
+  }, [params.id, supabase, router, toast]);
 
   useEffect(() => {
     if (!project) return;
@@ -421,13 +428,6 @@ export default function ProjectChatPage() {
         <div style={styles.centerState}>
           <p style={styles.mutedText}>Loading project…</p>
         </div>
-      ) : notFound ? (
-        <div style={styles.centerState}>
-          <div className="glass-sheen" style={styles.notFoundCard}>
-            <h1 style={styles.notFoundTitle}>Project not found</h1>
-            <p style={styles.mutedText}>This project doesn&apos;t exist, or you don&apos;t have access.</p>
-          </div>
-        </div>
       ) : (
         <div style={styles.chatLayout}>
           <div style={styles.messagesList}>
@@ -595,23 +595,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
-  },
-  notFoundCard: {
-    position: "relative",
-    background: "linear-gradient(160deg, rgba(12,12,14,0.7) 0%, rgba(0,0,0,0.65) 50%, rgba(6,6,8,0.7) 100%)",
-    border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: 16,
-    backdropFilter: "blur(24px) saturate(140%)",
-    WebkitBackdropFilter: "blur(24px) saturate(140%)",
-    padding: "32px 36px",
-    textAlign: "center",
-  },
-  notFoundTitle: {
-    color: "#ffffff",
-    fontSize: 22,
-    fontWeight: 700,
-    margin: "0 0 8px",
-    letterSpacing: "-0.02em",
   },
   mutedText: {
     color: "#9a9aa5",
@@ -781,13 +764,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 11,
     fontWeight: 600,
     marginLeft: 2,
-  },
-  nodeClass: {
-    color: "#7a7a85",
-    fontSize: 11.5,
-    background: "rgba(255,255,255,0.05)",
-    borderRadius: 4,
-    padding: "1px 6px",
   },
   rawFallbackWrap: {
     background: "rgba(0,0,0,0.4)",
