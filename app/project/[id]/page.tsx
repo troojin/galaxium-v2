@@ -61,7 +61,7 @@ function highlightLua(code: string): string {
 
   return escaped.replace(tokenRegex, (match, blockComment, lineComment, str, num, word) => {
     if (blockComment || lineComment) {
-      return `<span style="color:#6a6f81;font-style:italic;">${match}</span>`;
+      return `<span style="color:#6a6f81;">${match}</span>`;
     }
     if (str) {
       return `<span style="color:#8ee9b6;">${match}</span>`;
@@ -71,10 +71,7 @@ function highlightLua(code: string): string {
     }
     if (word) {
       if (LUA_KEYWORDS.has(word)) {
-        return `<span style="color:#eb7973;font-weight:600;">${match}</span>`;
-      }
-      if (LUA_BUILTINS.has(word)) {
-        return `<span style="color:#8fb4ff;">${match}</span>`;
+        return `<span style="color:#eb7973;">${match}</span>`;
       }
       return match;
     }
@@ -1292,7 +1289,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: "10px 12px",
     margin: 0,
     overflowX: "auto",
-    fontSize: 12.5,
+    fontSize: "10pt",
+    fontWeight: 400,
     lineHeight: 1.6,
     color: "#d4d4dc",
     fontFamily: "'Fira Mono', 'Fira Code', monospace",
@@ -1426,7 +1424,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   modalParent: {
     color: "#5a5a64",
     fontSize: 11.5,
-    fontFamily: "monospace",
+    fontFamily: "'Fira Mono', 'Fira Code', monospace",
     padding: "8px 14px 0",
   },
   modalSourceBlock: {
@@ -1436,7 +1434,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: "1px solid rgba(255,255,255,0.06)",
     borderRadius: 8,
     overflow: "auto",
-    fontSize: 12.5,
+    fontSize: "10pt",
+    fontWeight: 400,
     lineHeight: 1.65,
     color: "#d4d4dc",
     fontFamily: "'Fira Mono', 'Fira Code', monospace",
