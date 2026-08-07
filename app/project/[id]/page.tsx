@@ -543,7 +543,6 @@ export default function ProjectChatPage() {
                 disabled={streaming}
               />
               <div style={styles.inputActions}>
-                <span style={styles.hintText}>↵ send · shift+↵ newline</span>
                 {streaming ? (
                   <button className="stop-btn" style={styles.stopBtn} onClick={stopStreaming}>
                     ◼ Stop
@@ -569,11 +568,12 @@ export default function ProjectChatPage() {
 
 const styles: { [key: string]: React.CSSProperties } = {
   page: {
-    minHeight: "100vh",
+    height: "100vh",
     width: "100%",
     background: "#0a0a0a",
     display: "flex",
     flexDirection: "column",
+    overflow: "hidden",
   },
   topbar: {
     height: 58,
@@ -933,14 +933,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   inputActions: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     marginTop: 8,
-    paddingTop: 8,
-    borderTop: "1px solid rgba(255,255,255,0.05)",
-  },
-  hintText: {
-    color: "#4a4a54",
-    fontSize: 11.5,
   },
   sendBtn: {
     background: "linear-gradient(160deg, rgba(124,77,225,0.85) 0%, rgba(91,33,182,0.85) 100%)",
