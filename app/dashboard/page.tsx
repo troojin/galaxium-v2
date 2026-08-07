@@ -162,6 +162,14 @@ export default function DashboardPage() {
       return;
     }
 
+    const nameTaken = projects.some(
+      (p) => p.name.trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (nameTaken) {
+      setModalError("You already have a project with that name.");
+      return;
+    }
+
     setCreating(true);
     setModalError(null);
 
@@ -184,8 +192,12 @@ export default function DashboardPage() {
     setCreating(false);
 
     if (error) {
-      setModalError(error.message);
-      toast.error("Couldn't create the project.");
+      if (error.code === "23505") {
+        setModalError("You already have a project with that name.");
+      } else {
+        setModalError(error.message);
+        toast.error("Couldn't create the project.");
+      }
       return;
     }
 
@@ -227,6 +239,14 @@ export default function DashboardPage() {
       return;
     }
 
+    const nameTaken = projects.some(
+      (p) => p.id !== renameTarget.id && p.name.trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (nameTaken) {
+      setRenameError("You already have a project with that name.");
+      return;
+    }
+
     setRenaming(true);
     setRenameError(null);
 
@@ -240,8 +260,12 @@ export default function DashboardPage() {
     setRenaming(false);
 
     if (error) {
-      setRenameError(error.message);
-      toast.error("Couldn't rename the project.");
+      if (error.code === "23505") {
+        setRenameError("You already have a project with that name.");
+      } else {
+        setRenameError(error.message);
+        toast.error("Couldn't rename the project.");
+      }
       return;
     }
 
