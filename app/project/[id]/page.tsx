@@ -131,6 +131,7 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
                       <path d="M13 6l6 6-6 6" />
                     </svg>
                   </span>
+                  <span className="created-item-tooltip">{node.className}</span>
                 </button>
               );
             })}
@@ -444,6 +445,28 @@ export default function ProjectChatPage() {
         .created-item-script:hover .created-item-name { color: #e4e4e8; }
         .created-item-hint { display: inline-flex; align-items: center; color: #6a6a74; margin-left: 2px; transition: color 0.2s ease; }
         .created-item-script:hover .created-item-hint { color: #a78bfa; }
+        .created-item-tooltip {
+          position: absolute;
+          top: calc(100% + 6px);
+          left: 50%;
+          transform: translateX(-50%) translateY(-4px);
+          background: #000000;
+          border: 1px solid rgba(255,255,255,0.1);
+          color: #c4b5fd;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 4px 9px;
+          border-radius: 6px;
+          white-space: nowrap;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.15s ease, transform 0.15s ease;
+          z-index: 20;
+        }
+        .created-item-script:hover .created-item-tooltip {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
@@ -781,6 +804,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 8,
   },
   createdItem: {
+    position: "relative",
     display: "flex",
     alignItems: "center",
     gap: 6,
