@@ -795,11 +795,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: "1px solid rgba(255,255,255,0.09)",
     cursor: "pointer",
   },
-  createdItemPlain: {
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    cursor: "default",
-  },
   createdItemName: {
     fontSize: 13,
     fontWeight: 500,
@@ -915,6 +910,24 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1.65,
     color: "#d4d4dc",
     fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+  },
+  modalTypeWrap: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "28px 14px 32px",
+  },
+  modalTypeBubble: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "10px 18px",
+    background: "#000000",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 999,
+    color: "#c4b5fd",
+    fontSize: 13.5,
+    fontWeight: 600,
   },
   inputArea: {
     paddingBottom: 28,
