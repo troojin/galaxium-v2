@@ -22,12 +22,35 @@ interface Message {
   created_at: string;
 }
 
-function InstanceNode({ node, depth = 0 }: { node: RobloxInstanceNode; depth?: number }) {
-  const [expanded, setExpanded] = useState(true);
-  const hasChildren = !!node.children && node.children.length > 0;
-  const hasSource = typeof node.source === "string" && node.source.trim().length > 0;
-  const [showSource, setShowSource] = useState(hasSource);
+function flattenInstances(
+  nodes: RobloxInstanceNode[]
+): RobloxInstanceNode[] {
+  const out: RobloxInstanceNode[] = [];
+  for (const node of nodes) {
+    out.push(node);
+    if (node.children && node.children.length) {
+      out.push(...flattenInstances(node.children));
+    }
+  }
+  return out;
+}
+
+function ScriptPreviewModal({
+  node,
+  onClose,
+}: {
+  node: RobloxInstanceNode;
+  onClose: () => void;
+}) {
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   async function handleCopy() {
     if (!node.source) return;
@@ -41,65 +64,70 @@ function InstanceNode({ node, depth = 0 }: { node: RobloxInstanceNode; depth?: n
   }
 
   return (
-    <div>
-      <div style={{ ...styles.nodeRow, paddingLeft: depth * 18 }}>
-        {hasChildren ? (
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            style={styles.expandBtn}
-            aria-label={expanded ? "Collapse" : "Expand"}
-          >
-            {expanded ? "▾" : "▸"}
-          </button>
-        ) : (
-          <span style={styles.expandSpacer} />
-        )}
-        <StudioIcon className={node.className} size={16} style={{ marginRight: 6 }} />
-        <span style={styles.nodeName}>{node.name}</span>
-        <span style={styles.nodeClass}>{node.className}</span>
-        {node.parent ? <span style={styles.nodeParent}>{node.parent}</span> : null}
-        {hasSource ? (
-          <button style={styles.sourceToggle} onClick={() => setShowSource((v) => !v)}>
-            {showSource ? "Hide code" : "View code"}
-          </button>
-        ) : null}
-      </div>
-
-      {hasSource && showSource ? (
-        <div style={{ ...styles.sourceWrap, marginLeft: depth * 18 + 22 }}>
-          <div style={styles.sourceHeader}>
-            <span style={styles.sourceLang}>Luau</span>
+    <div style={styles.modalOverlay} onClick={onClose}>
+      <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalHeader}>
+          <div style={styles.modalHeaderLeft}>
+            <StudioIcon className={node.className} size={18} style={{ marginRight: 2 }} />
+            <span style={styles.modalTitle}>{node.name}</span>
+            <span style={styles.nodeClass}>{node.className}</span>
+          </div>
+          <div style={styles.modalHeaderRight}>
             <button style={styles.copyBtn} onClick={handleCopy}>
               {copied ? "Copied ✓" : "Copy"}
             </button>
+            <button style={styles.modalCloseBtn} onClick={onClose} aria-label="Close">
+              ✕
+            </button>
           </div>
-          <pre style={styles.sourceBlock}>
-            <code>{node.source}</code>
-          </pre>
         </div>
-      ) : null}
-
-      {hasChildren && expanded ? (
-        <div>
-          {node.children!.map((child, i) => (
-            <InstanceNode key={i} node={child} depth={depth + 1} />
-          ))}
-        </div>
-      ) : null}
+        {node.parent ? <div style={styles.modalParent}>{node.parent}</div> : null}
+        <pre style={styles.modalSourceBlock}>
+          <code>{node.source}</code>
+        </pre>
+      </div>
     </div>
   );
 }
 
 function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
+  const [activeScript, setActiveScript] = useState<RobloxInstanceNode | null>(null);
+  const flat = useMemo(() => flattenInstances(response.instances), [response.instances]);
+
   return (
     <div style={styles.galaxiumMessage}>
       <p style={styles.explanationText}>{response.explanation}</p>
-      <div style={styles.instanceTree}>
-        {response.instances.map((node, i) => (
-          <InstanceNode key={i} node={node} />
-        ))}
+
+      <div style={styles.createdSection}>
+        <div style={styles.createdLabel}>Created ({flat.length})</div>
+        <div style={styles.createdGrid}>
+          {flat.map((node, i) => {
+            const hasSource = typeof node.source === "string" && node.source.trim().length > 0;
+            return (
+              <button
+                key={i}
+                onClick={() => hasSource && setActiveScript(node)}
+                style={{
+                  ...styles.createdItem,
+                  ...(hasSource ? styles.createdItemScript : styles.createdItemPlain),
+                }}
+                disabled={!hasSource}
+              >
+                <StudioIcon className={node.className} size={16} />
+                <span style={styles.createdItemName}>{node.name}</span>
+                <span style={styles.nodeClass}>{node.className}</span>
+                {hasSource ? <span style={styles.createdItemHint}>View →</span> : null}
+              </button>
+            );
+          })}
+        </div>
       </div>
+
       {response.followUp ? <p style={styles.followUpText}>{response.followUp}</p> : null}
+
+      {activeScript ? (
+        <ScriptPreviewModal node={activeScript} onClose={() => setActiveScript(null)} />
+      ) : null}
     </div>
   );
 }
@@ -419,10 +447,17 @@ export default function ProjectChatPage() {
                 {messages.map((msg) => {
                   const isLast = msg.id === messages[messages.length - 1]?.id;
                   const isStreamingThis = msg.role === "assistant" && streaming && isLast;
-                  const parsed =
-                    msg.role === "assistant" && !isStreamingThis
-                      ? parseGalaxiumResponse(msg.content)
-                      : null;
+                  let parsed: GalaxiumResponse | null = null;
+                  if (msg.role === "assistant" && !isStreamingThis) {
+                    parsed = parseGalaxiumResponse(msg.content);
+                    if (!parsed && msg.content.trim().startsWith("{")) {
+                      console.warn(
+                        "[Galaxium] Failed to parse assistant message as GalaxiumResponse. " +
+                          "Check that rules.ts exports parseGalaxiumResponse/GalaxiumResponse and that this page.tsx matches the current schema.",
+                        msg.content
+                      );
+                    }
+                  }
 
                   return (
                     <div
@@ -440,6 +475,15 @@ export default function ProjectChatPage() {
                           <span style={styles.generatingText}>Building your Roblox instances…</span>
                         ) : parsed ? (
                           <GalaxiumMessageView response={parsed} />
+                        ) : msg.content.trim().startsWith("{") ? (
+                          <div style={styles.rawFallbackWrap}>
+                            <div style={styles.sourceHeader}>
+                              <span style={styles.sourceLang}>Unparsed response</span>
+                            </div>
+                            <pre style={styles.sourceBlock}>
+                              <code>{msg.content}</code>
+                            </pre>
+                          </div>
                         ) : (
                           msg.content
                         )}
@@ -676,7 +720,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   galaxiumMessage: {
     display: "flex",
     flexDirection: "column",
-    gap: 10,
+    gap: 12,
     whiteSpace: "normal",
   },
   explanationText: {
@@ -691,41 +735,52 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 13.5,
     fontStyle: "italic",
   },
-  instanceTree: {
-    background: "rgba(255,255,255,0.02)",
-    border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: 10,
-    padding: "8px 6px",
-  },
-  nodeRow: {
+  createdSection: {
     display: "flex",
-    alignItems: "center",
-    gap: 4,
-    padding: "4px 6px",
-    borderRadius: 6,
+    flexDirection: "column",
+    gap: 8,
   },
-  expandBtn: {
-    width: 14,
-    height: 14,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "none",
-    border: "none",
+  createdLabel: {
     color: "#7a7a85",
-    fontSize: 10,
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+  createdGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  createdItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "7px 10px",
+    borderRadius: 9,
+    fontFamily: "inherit",
+    textAlign: "left",
+  },
+  createdItemScript: {
+    background: "rgba(139,92,246,0.08)",
+    border: "1px solid rgba(139,92,246,0.28)",
     cursor: "pointer",
-    padding: 0,
-    flexShrink: 0,
   },
-  expandSpacer: {
-    width: 14,
-    flexShrink: 0,
+  createdItemPlain: {
+    background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    cursor: "default",
   },
-  nodeName: {
+  createdItemName: {
     color: "#e4e4e8",
     fontSize: 13,
     fontWeight: 500,
+  },
+  createdItemHint: {
+    color: "#a78bfa",
+    fontSize: 11,
+    fontWeight: 600,
+    marginLeft: 2,
   },
   nodeClass: {
     color: "#7a7a85",
@@ -734,30 +789,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: 4,
     padding: "1px 6px",
   },
-  nodeParent: {
-    color: "#5a5a64",
-    fontSize: 11,
-    fontFamily: "monospace",
-  },
-  sourceToggle: {
-    marginLeft: "auto",
-    background: "none",
-    border: "1px solid rgba(139,92,246,0.25)",
-    color: "#a78bfa",
-    fontSize: 11,
-    fontWeight: 600,
-    borderRadius: 6,
-    padding: "2px 8px",
-    cursor: "pointer",
-    transition: "color 0.15s, border-color 0.15s",
-  },
-  sourceWrap: {
+  rawFallbackWrap: {
     background: "rgba(0,0,0,0.4)",
-    border: "1px solid rgba(255,255,255,0.06)",
+    border: "1px solid rgba(248,113,113,0.2)",
     borderRadius: 8,
-    marginTop: 4,
-    marginBottom: 6,
-    marginRight: 8,
     overflow: "hidden",
   },
   sourceHeader: {
@@ -790,6 +825,79 @@ const styles: { [key: string]: React.CSSProperties } = {
     overflowX: "auto",
     fontSize: 12.5,
     lineHeight: 1.6,
+    color: "#d4d4dc",
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+  },
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.6)",
+    backdropFilter: "blur(4px)",
+    WebkitBackdropFilter: "blur(4px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 100,
+    padding: 24,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 680,
+    maxHeight: "80vh",
+    display: "flex",
+    flexDirection: "column",
+    background: "linear-gradient(160deg, rgba(16,16,18,0.98) 0%, rgba(8,8,10,0.98) 100%)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 14,
+    boxShadow: "0 24px 64px -12px rgba(0,0,0,0.7)",
+    overflow: "hidden",
+  },
+  modalHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "12px 14px",
+    borderBottom: "1px solid rgba(255,255,255,0.07)",
+  },
+  modalHeaderLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  modalHeaderRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+  },
+  modalTitle: {
+    color: "#ffffff",
+    fontSize: 14.5,
+    fontWeight: 600,
+  },
+  modalCloseBtn: {
+    background: "none",
+    border: "none",
+    color: "#9a9aa5",
+    fontSize: 14,
+    cursor: "pointer",
+    padding: "4px 8px",
+    borderRadius: 6,
+  },
+  modalParent: {
+    color: "#5a5a64",
+    fontSize: 11.5,
+    fontFamily: "monospace",
+    padding: "8px 14px 0",
+  },
+  modalSourceBlock: {
+    margin: "10px 14px 14px",
+    padding: "12px 14px",
+    background: "rgba(0,0,0,0.4)",
+    border: "1px solid rgba(255,255,255,0.06)",
+    borderRadius: 8,
+    overflow: "auto",
+    fontSize: 12.5,
+    lineHeight: 1.65,
     color: "#d4d4dc",
     fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
   },
