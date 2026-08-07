@@ -106,6 +106,7 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
               <button
                 key={i}
                 onClick={() => hasSource && setActiveScript(node)}
+                className={hasSource ? "created-item-script" : undefined}
                 style={{
                   ...styles.createdItem,
                   ...(hasSource ? styles.createdItemScript : styles.createdItemPlain),
@@ -113,8 +114,8 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
                 disabled={!hasSource}
               >
                 <StudioIcon className={node.className} size={16} />
-                <span style={styles.createdItemName}>{node.name}</span>
-                {hasSource ? <span style={styles.createdItemHint}>View →</span> : null}
+                <span className="created-item-name" style={styles.createdItemName}>{node.name}</span>
+                {hasSource ? <span className="created-item-hint">View →</span> : null}
               </button>
             );
           })}
@@ -403,6 +404,19 @@ export default function ProjectChatPage() {
         }
         .node-row:hover { background: rgba(255,255,255,0.03); }
         .source-toggle:hover { color: #c4b5fd !important; border-color: rgba(139,92,246,0.4) !important; }
+        .created-item-script {
+          background: rgba(255,255,255,0.03) !important;
+          border-color: rgba(255,255,255,0.09) !important;
+          transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .created-item-script:hover {
+          background: rgba(139,92,246,0.08) !important;
+          border-color: rgba(139,92,246,0.28) !important;
+        }
+        .created-item-name { color: #a8a8b0; transition: color 0.2s ease; }
+        .created-item-script:hover .created-item-name { color: #e4e4e8; }
+        .created-item-hint { color: #6a6a74; font-size: 11px; font-weight: 600; margin-left: 2px; transition: color 0.2s ease; }
+        .created-item-script:hover .created-item-hint { color: #a78bfa; }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
@@ -745,8 +759,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     textAlign: "left",
   },
   createdItemScript: {
-    background: "rgba(139,92,246,0.08)",
-    border: "1px solid rgba(139,92,246,0.28)",
+    border: "1px solid rgba(255,255,255,0.09)",
     cursor: "pointer",
   },
   createdItemPlain: {
@@ -755,15 +768,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: "default",
   },
   createdItemName: {
-    color: "#e4e4e8",
     fontSize: 13,
     fontWeight: 500,
-  },
-  createdItemHint: {
-    color: "#a78bfa",
-    fontSize: 11,
-    fontWeight: 600,
-    marginLeft: 2,
   },
   rawFallbackWrap: {
     background: "rgba(0,0,0,0.4)",
