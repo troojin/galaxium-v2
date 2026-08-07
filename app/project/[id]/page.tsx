@@ -44,6 +44,7 @@ function ScriptPreviewModal({
   onClose: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const hasSource = typeof node.source === "string" && node.source.trim().length > 0;
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -73,18 +74,29 @@ function ScriptPreviewModal({
             <span style={styles.modalTitle}>{node.name}</span>
           </div>
           <div style={styles.modalHeaderRight}>
-            <button style={styles.copyBtn} onClick={handleCopy}>
-              {copied ? "Copied ✓" : "Copy"}
-            </button>
+            {hasSource ? (
+              <button style={styles.copyBtn} onClick={handleCopy}>
+                {copied ? "Copied ✓" : "Copy"}
+              </button>
+            ) : null}
             <button style={styles.modalCloseBtn} onClick={onClose} aria-label="Close">
               ✕
             </button>
           </div>
         </div>
         {node.parent ? <div style={styles.modalParent}>{node.parent}</div> : null}
-        <pre style={styles.modalSourceBlock}>
-          <code>{node.source}</code>
-        </pre>
+        {hasSource ? (
+          <pre style={styles.modalSourceBlock}>
+            <code>{node.source}</code>
+          </pre>
+        ) : (
+          <div style={styles.modalTypeWrap}>
+            <div style={styles.modalTypeBubble}>
+              <StudioIcon className={node.className} size={20} />
+              <span>{node.className}</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -107,24 +119,18 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
               return (
                 <button
                   key={i}
-                  onClick={() => hasSource && setActiveScript(node)}
-                  className={hasSource ? "created-item-script" : undefined}
-                  style={{
-                    ...styles.createdItem,
-                    ...(hasSource ? styles.createdItemScript : styles.createdItemPlain),
-                  }}
-                  disabled={!hasSource}
+                  onClick={() => setActiveScript(node)}
+                  className="created-item-script"
+                  style={{ ...styles.createdItem, ...styles.createdItemScript }}
                 >
                   <StudioIcon className={node.className} size={16} />
                   <span className="created-item-name" style={styles.createdItemName}>{node.name}</span>
-                  {hasSource ? (
-                    <span className="created-item-hint" aria-label="View source">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M5 12h14" />
-                        <path d="M13 6l6 6-6 6" />
-                      </svg>
-                    </span>
-                  ) : null}
+                  <span className="created-item-hint" aria-label={hasSource ? "View source" : "View details"}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14" />
+                      <path d="M13 6l6 6-6 6" />
+                    </svg>
+                  </span>
                 </button>
               );
             })}
@@ -391,7 +397,7 @@ export default function ProjectChatPage() {
         * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
         textarea::placeholder { color: #6b6b74; }
         textarea:focus { outline: none; }
-        .back-link:hover { color: #c4b5fd !important; }
+        .back-link:hover { color: #c4b5fd !important; border-color: rgba(139,92,246,0.35) !important; }
         .send-btn:hover:not(:disabled) { filter: brightness(1.15); }
         .send-btn:disabled { opacity: 0.45; cursor: default; }
         .stop-btn:hover { border-color: rgba(248,113,113,0.5) !important; color: #fca5a5 !important; }
@@ -453,8 +459,12 @@ export default function ProjectChatPage() {
             className="back-link"
             style={styles.backBtn}
             onClick={() => router.push("/dashboard")}
+            aria-label="Back to dashboard"
           >
-            ← Dashboard
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5" />
+              <path d="M11 18l-6-6 6-6" />
+            </svg>
           </button>
         </div>
       </header>
@@ -613,15 +623,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxWidth: 320,
   },
   backBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 30,
+    height: 30,
     background: "none",
-    border: "none",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 8,
     color: "#9a9aa5",
-    fontSize: 13.5,
-    fontWeight: 500,
     cursor: "pointer",
     padding: 0,
-    transition: "color 0.15s ease",
-    whiteSpace: "nowrap",
+    transition: "color 0.15s ease, border-color 0.15s ease",
   },
   centerState: {
     flex: 1,
