@@ -4,6 +4,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
+import { StudioIcon } from "@/components/studio-icon";
+import { parseGalaxiumResponse } from "@/lib/ai/rules";
+import type { GalaxiumResponse, RobloxInstanceNode } from "@/lib/ai/rules";
 
 interface Project {
   id: string;
@@ -17,6 +20,88 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   created_at: string;
+}
+
+function InstanceNode({ node, depth = 0 }: { node: RobloxInstanceNode; depth?: number }) {
+  const [expanded, setExpanded] = useState(true);
+  const hasChildren = !!node.children && node.children.length > 0;
+  const hasSource = typeof node.source === "string" && node.source.trim().length > 0;
+  const [showSource, setShowSource] = useState(hasSource);
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    if (!node.source) return;
+    try {
+      await navigator.clipboard.writeText(node.source);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard unavailable, ignore
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ ...styles.nodeRow, paddingLeft: depth * 18 }}>
+        {hasChildren ? (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            style={styles.expandBtn}
+            aria-label={expanded ? "Collapse" : "Expand"}
+          >
+            {expanded ? "▾" : "▸"}
+          </button>
+        ) : (
+          <span style={styles.expandSpacer} />
+        )}
+        <StudioIcon className={node.className} size={16} style={{ marginRight: 6 }} />
+        <span style={styles.nodeName}>{node.name}</span>
+        <span style={styles.nodeClass}>{node.className}</span>
+        {node.parent ? <span style={styles.nodeParent}>{node.parent}</span> : null}
+        {hasSource ? (
+          <button style={styles.sourceToggle} onClick={() => setShowSource((v) => !v)}>
+            {showSource ? "Hide code" : "View code"}
+          </button>
+        ) : null}
+      </div>
+
+      {hasSource && showSource ? (
+        <div style={{ ...styles.sourceWrap, marginLeft: depth * 18 + 22 }}>
+          <div style={styles.sourceHeader}>
+            <span style={styles.sourceLang}>Luau</span>
+            <button style={styles.copyBtn} onClick={handleCopy}>
+              {copied ? "Copied ✓" : "Copy"}
+            </button>
+          </div>
+          <pre style={styles.sourceBlock}>
+            <code>{node.source}</code>
+          </pre>
+        </div>
+      ) : null}
+
+      {hasChildren && expanded ? (
+        <div>
+          {node.children!.map((child, i) => (
+            <InstanceNode key={i} node={child} depth={depth + 1} />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
+  return (
+    <div style={styles.galaxiumMessage}>
+      <p style={styles.explanationText}>{response.explanation}</p>
+      <div style={styles.instanceTree}>
+        {response.instances.map((node, i) => (
+          <InstanceNode key={i} node={node} />
+        ))}
+      </div>
+      {response.followUp ? <p style={styles.followUpText}>{response.followUp}</p> : null}
+    </div>
+  );
 }
 
 export default function ProjectChatPage() {
@@ -281,6 +366,8 @@ export default function ProjectChatPage() {
         @keyframes blink {
           0%, 100% { opacity: 1; } 50% { opacity: 0; }
         }
+        .node-row:hover { background: rgba(255,255,255,0.03); }
+        .source-toggle:hover { color: #c4b5fd !important; border-color: rgba(139,92,246,0.4) !important; }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
@@ -329,26 +416,37 @@ export default function ProjectChatPage() {
               </div>
             ) : (
               <div style={styles.messagesInner}>
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={msg.role === "assistant" ? "msg-assistant" : undefined}
-                    style={msg.role === "user" ? styles.userRow : styles.assistantRow}
-                  >
+                {messages.map((msg) => {
+                  const isLast = msg.id === messages[messages.length - 1]?.id;
+                  const isStreamingThis = msg.role === "assistant" && streaming && isLast;
+                  const parsed =
+                    msg.role === "assistant" && !isStreamingThis
+                      ? parseGalaxiumResponse(msg.content)
+                      : null;
+
+                  return (
                     <div
-                      style={msg.role === "user" ? styles.userBubble : styles.assistantBubble}
-                      className={
-                        msg.role === "assistant" &&
-                        streaming &&
-                        msg.id === messages[messages.length - 1]?.id
-                          ? "cursor-blink"
-                          : undefined
-                      }
+                      key={msg.id}
+                      className={msg.role === "assistant" ? "msg-assistant" : undefined}
+                      style={msg.role === "user" ? styles.userRow : styles.assistantRow}
                     >
-                      {msg.content}
+                      <div
+                        style={msg.role === "user" ? styles.userBubble : styles.assistantBubble}
+                        className={isStreamingThis ? "cursor-blink" : undefined}
+                      >
+                        {msg.role === "user" ? (
+                          msg.content
+                        ) : isStreamingThis ? (
+                          <span style={styles.generatingText}>Building your Roblox instances…</span>
+                        ) : parsed ? (
+                          <GalaxiumMessageView response={parsed} />
+                        ) : (
+                          msg.content
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={bottomRef} />
               </div>
             )}
@@ -570,6 +668,130 @@ const styles: { [key: string]: React.CSSProperties } = {
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
     padding: "2px 0",
+  },
+  generatingText: {
+    color: "#9a9aa5",
+    fontStyle: "italic",
+  },
+  galaxiumMessage: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    whiteSpace: "normal",
+  },
+  explanationText: {
+    margin: 0,
+    color: "#e4e4e8",
+    fontSize: 14,
+    lineHeight: 1.7,
+  },
+  followUpText: {
+    margin: 0,
+    color: "#a78bfa",
+    fontSize: 13.5,
+    fontStyle: "italic",
+  },
+  instanceTree: {
+    background: "rgba(255,255,255,0.02)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 10,
+    padding: "8px 6px",
+  },
+  nodeRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    padding: "4px 6px",
+    borderRadius: 6,
+  },
+  expandBtn: {
+    width: 14,
+    height: 14,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "none",
+    border: "none",
+    color: "#7a7a85",
+    fontSize: 10,
+    cursor: "pointer",
+    padding: 0,
+    flexShrink: 0,
+  },
+  expandSpacer: {
+    width: 14,
+    flexShrink: 0,
+  },
+  nodeName: {
+    color: "#e4e4e8",
+    fontSize: 13,
+    fontWeight: 500,
+  },
+  nodeClass: {
+    color: "#7a7a85",
+    fontSize: 11.5,
+    background: "rgba(255,255,255,0.05)",
+    borderRadius: 4,
+    padding: "1px 6px",
+  },
+  nodeParent: {
+    color: "#5a5a64",
+    fontSize: 11,
+    fontFamily: "monospace",
+  },
+  sourceToggle: {
+    marginLeft: "auto",
+    background: "none",
+    border: "1px solid rgba(139,92,246,0.25)",
+    color: "#a78bfa",
+    fontSize: 11,
+    fontWeight: 600,
+    borderRadius: 6,
+    padding: "2px 8px",
+    cursor: "pointer",
+    transition: "color 0.15s, border-color 0.15s",
+  },
+  sourceWrap: {
+    background: "rgba(0,0,0,0.4)",
+    border: "1px solid rgba(255,255,255,0.06)",
+    borderRadius: 8,
+    marginTop: 4,
+    marginBottom: 6,
+    marginRight: 8,
+    overflow: "hidden",
+  },
+  sourceHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "6px 10px",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+    background: "rgba(255,255,255,0.02)",
+  },
+  sourceLang: {
+    color: "#7a7a85",
+    fontSize: 10.5,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+  },
+  copyBtn: {
+    background: "none",
+    border: "none",
+    color: "#9a9aa5",
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: "pointer",
+    padding: "2px 6px",
+  },
+  sourceBlock: {
+    padding: "10px 12px",
+    margin: 0,
+    overflowX: "auto",
+    fontSize: 12.5,
+    lineHeight: 1.6,
+    color: "#d4d4dc",
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
   },
   inputArea: {
     paddingBottom: 28,
