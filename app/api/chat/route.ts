@@ -1,14 +1,9 @@
 import { NextRequest } from "next/server";
 import { createChatCompletionStream, ChatMessage } from "@/lib/ai/client";
 import { createClient } from "@/lib/supabase/server";
+import { SYSTEM_PROMPT } from "@/lib/ai/rules";
 
 export const runtime = "edge";
-
-const SYSTEM_PROMPT: ChatMessage = {
-  role: "system",
-  content:
-    "You are Galaxium AI, a helpful conversational assistant. Answer naturally, keep context from the chat history, and ask brief follow-up questions when useful.",
-};
 
 const MAX_HISTORY_MESSAGES = 30;
 
@@ -29,6 +24,7 @@ function cleanMessages(messages: ChatMessage[]): ChatMessage[] {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+
     const { messages, projectId } = body as {
       messages: ChatMessage[];
       projectId: string;
@@ -36,22 +32,44 @@ export async function POST(req: NextRequest) {
 
     if (!Array.isArray(messages) || !projectId) {
       return new Response(
-        JSON.stringify({ error: "Missing messages or projectId" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Missing messages or projectId",
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
     }
 
     const supabase = await createClient();
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    const {
+      data: userData,
+      error: userError,
+    } = await supabase.auth.getUser();
 
     if (userError || !userData?.user) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized", details: userError?.message }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Unauthorized",
+          details: userError?.message,
+        }),
+        {
+          status: 401,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
     }
 
-    const { data: project, error: projectError } = await supabase
+    const {
+      data: project,
+      error: projectError,
+    } = await supabase
       .from("projects")
       .select("id")
       .eq("id", projectId)
@@ -60,8 +78,15 @@ export async function POST(req: NextRequest) {
 
     if (projectError || !project) {
       return new Response(
-        JSON.stringify({ error: "Project not found or access denied" }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Project not found or access denied",
+        }),
+        {
+          status: 404,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
     }
 
@@ -70,12 +95,22 @@ export async function POST(req: NextRequest) {
 
     if (!latestUserMessage || latestUserMessage.role !== "user") {
       return new Response(
-        JSON.stringify({ error: "Send a user message to start chatting" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Send a user message to start chatting",
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
     }
 
-    const { data: history, error: historyError } = await supabase
+    const {
+      data: history,
+      error: historyError,
+    } = await supabase
       .from("messages")
       .select("role, content, created_at")
       .eq("project_id", projectId)
@@ -84,13 +119,22 @@ export async function POST(req: NextRequest) {
 
     if (historyError) {
       return new Response(
-        JSON.stringify({ error: "Couldn't load conversation history" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Couldn't load conversation history",
+        }),
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
     }
 
     const dbMessages = cleanMessages((history ?? []) as ChatMessage[]);
+
     const lastDbMessage = dbMessages.at(-1);
+
     const alreadyPersisted =
       lastDbMessage?.role === "user" &&
       lastDbMessage.content === latestUserMessage.content;
@@ -100,24 +144,32 @@ export async function POST(req: NextRequest) {
       : [...dbMessages, latestUserMessage];
 
     let trimmed = fullHistory.slice(-MAX_HISTORY_MESSAGES);
+
     while (trimmed.length > 1 && trimmed[0].role !== "user") {
       trimmed = trimmed.slice(1);
     }
 
     if (trimmed.length === 0 || trimmed.at(-1)?.role !== "user") {
       return new Response(
-        JSON.stringify({ error: "Send a user message to start chatting" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Send a user message to start chatting",
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
     }
 
-    const groqRes = await createChatCompletionStream({
+    const stream = await createChatCompletionStream({
       messages: [SYSTEM_PROMPT, ...trimmed],
       temperature: 0.7,
       max_tokens: 1024,
     });
 
-    return new Response(groqRes, {
+    return new Response(stream, {
       status: 200,
       headers: {
         "Content-Type": "text/event-stream",
@@ -126,14 +178,22 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
+    const errorMessage =
+      err instanceof Error ? err.message : String(err);
+
     console.error("Chat route error:", errorMessage);
+
     return new Response(
       JSON.stringify({
         error: "Internal server error",
         message: errorMessage,
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
     );
   }
 }
