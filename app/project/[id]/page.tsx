@@ -61,20 +61,20 @@ function highlightLua(code: string): string {
 
   return escaped.replace(tokenRegex, (match, blockComment, lineComment, str, num, word) => {
     if (blockComment || lineComment) {
-      return `<span style="color:#6a6a74;font-style:italic;">${match}</span>`;
+      return `<span style="color:#6a6f81;font-style:italic;">${match}</span>`;
     }
     if (str) {
-      return `<span style="color:#a3d977;">${match}</span>`;
+      return `<span style="color:#8ee9b6;">${match}</span>`;
     }
     if (num) {
-      return `<span style="color:#e0af68;">${match}</span>`;
+      return `<span style="color:#f2ba2a;">${match}</span>`;
     }
     if (word) {
       if (LUA_KEYWORDS.has(word)) {
-        return `<span style="color:#c792ea;font-weight:600;">${match}</span>`;
+        return `<span style="color:#eb7973;font-weight:600;">${match}</span>`;
       }
       if (LUA_BUILTINS.has(word)) {
-        return `<span style="color:#82aaff;">${match}</span>`;
+        return `<span style="color:#8fb4ff;">${match}</span>`;
       }
       return match;
     }
@@ -776,7 +776,7 @@ export default function ProjectChatPage() {
   return (
     <div style={styles.page}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Mono:wght@400;500;700&display=swap');
         * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
         textarea::placeholder { color: #6b6b74; }
         textarea:focus { outline: none; }
@@ -1295,7 +1295,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 12.5,
     lineHeight: 1.6,
     color: "#d4d4dc",
-    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+    fontFamily: "'Fira Mono', 'Fira Code', monospace",
   },
   truncatedWrap: {
     display: "flex",
@@ -1439,7 +1439,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 12.5,
     lineHeight: 1.65,
     color: "#d4d4dc",
-    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+    fontFamily: "'Fira Mono', 'Fira Code', monospace",
   },
   modalTypeWrap: {
     display: "flex",
