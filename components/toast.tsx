@@ -27,28 +27,32 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const DEFAULT_DURATION = 3800;
-const EXIT_DURATION = 320;
+const EXIT_DURATION = 300;
+const MAX_DEPTH_EFFECT = 3;
 
 const VARIANT_STYLES: Record<
   ToastVariant,
-  { border: string; glow: string; iconColor: string; barColor: string }
+  { accent: string; accentSoft: string; glow: string; iconColor: string; barColor: string }
 > = {
   success: {
-    border: "rgba(139,92,246,0.4)",
-    glow: "0 8px 32px -8px rgba(139,92,246,0.45)",
+    accent: "#8b5cf6",
+    accentSoft: "rgba(139,92,246,0.16)",
+    glow: "0 10px 36px -10px rgba(139,92,246,0.5)",
     iconColor: "#c4b5fd",
     barColor: "linear-gradient(90deg, #8b5cf6, #a78bfa)",
   },
   error: {
-    border: "rgba(248,113,113,0.4)",
-    glow: "0 8px 32px -8px rgba(248,113,113,0.4)",
+    accent: "#f87171",
+    accentSoft: "rgba(248,113,113,0.16)",
+    glow: "0 10px 36px -10px rgba(248,113,113,0.45)",
     iconColor: "#f87171",
     barColor: "linear-gradient(90deg, #ef4444, #f87171)",
   },
   info: {
-    border: "rgba(255,255,255,0.16)",
-    glow: "0 8px 32px -8px rgba(0,0,0,0.6)",
-    iconColor: "#9a9aa5",
+    accent: "#9a9aa5",
+    accentSoft: "rgba(255,255,255,0.08)",
+    glow: "0 10px 36px -10px rgba(0,0,0,0.65)",
+    iconColor: "#c4c4cc",
     barColor: "linear-gradient(90deg, #6b6b74, #9a9aa5)",
   },
 };
@@ -56,7 +60,7 @@ const VARIANT_STYLES: Record<
 function VariantIcon({ variant, color }: { variant: ToastVariant; color: string }) {
   if (variant === "success") {
     return (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
         <path
           d="M4 12.5L9.5 18L20 6"
           stroke={color}
@@ -70,14 +74,14 @@ function VariantIcon({ variant, color }: { variant: ToastVariant; color: string 
   }
   if (variant === "error") {
     return (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
         <path d="M12 5v9" stroke={color} strokeWidth="3" strokeLinecap="round" />
         <circle cx="12" cy="18" r="1.6" fill={color} />
       </svg>
     );
   }
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="7.2" r="1.6" fill={color} />
       <path d="M12 11v8" stroke={color} strokeWidth="3" strokeLinecap="round" />
     </svg>
@@ -150,13 +154,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
       <style>{`
         @keyframes toastIn {
-          0% { opacity: 0; transform: translateY(22px) scale(0.9); filter: blur(4px); }
-          55% { opacity: 1; transform: translateY(-3px) scale(1.015); filter: blur(0); }
+          0% { opacity: 0; transform: translateY(20px) scale(0.92); filter: blur(3px); }
+          55% { opacity: 1; transform: translateY(-2px) scale(1.01); filter: blur(0); }
           100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
         }
         @keyframes toastOut {
           0% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-          100% { opacity: 0; transform: translateY(14px) scale(0.92); filter: blur(3px); }
+          100% { opacity: 0; transform: translateY(10px) scale(0.94); filter: blur(2px); }
         }
         @keyframes toastBarShrink {
           from { transform: scaleX(1); }
@@ -164,7 +168,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         }
         @keyframes toastIconPop {
           0% { transform: scale(0); }
-          60% { transform: scale(1.25); }
+          60% { transform: scale(1.2); }
           100% { transform: scale(1); }
         }
         @keyframes toastCheckDraw {
@@ -173,13 +177,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         }
         .toast-item {
           animation: toastIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-          transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+          transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease, box-shadow 0.25s ease;
         }
         .toast-item:hover {
-          transform: translateY(-2px) scale(1.015);
+          transform: translateY(-2px) scale(1.01) !important;
+          opacity: 1 !important;
         }
         .toast-item.leaving {
-          animation: toastOut 0.32s cubic-bezier(0.4, 0, 1, 1) both;
+          animation: toastOut 0.3s cubic-bezier(0.4, 0, 1, 1) both;
         }
         .toast-icon-circle {
           animation: toastIconPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.08s both;
@@ -192,33 +197,67 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         .toast-bar-fill {
           transform-origin: left center;
         }
+        .toast-close {
+          opacity: 0;
+          transform: scale(0.85);
+          transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease, background 0.15s ease;
+        }
+        .toast-item:hover .toast-close {
+          opacity: 1;
+          transform: scale(1);
+        }
+        .toast-close:hover {
+          background: rgba(255,255,255,0.1) !important;
+          color: #ffffff !important;
+        }
       `}</style>
 
       <div style={styles.wrap} aria-live="polite">
-        {toasts.map((t) => {
+        {toasts.map((t, i) => {
           const v = VARIANT_STYLES[t.variant];
+          const depth = Math.min(toasts.length - 1 - i, MAX_DEPTH_EFFECT);
+
           return (
             <div
               key={t.id}
               className={`toast-item${t.leaving ? " leaving" : ""}`}
               style={{
                 ...styles.toast,
-                borderColor: v.border,
-                boxShadow: `${v.glow}, inset 0 0.5px 0 rgba(255,255,255,0.15)`,
+                boxShadow: `${v.glow}, inset 0 0.5px 0 rgba(255,255,255,0.14)`,
+                transform: depth > 0 ? `scale(${1 - depth * 0.035}) translateY(${depth * -4}px)` : undefined,
+                opacity: depth > 0 ? 1 - depth * 0.16 : 1,
+                zIndex: 100 - depth,
               }}
               onClick={() => startExit(t.id)}
               onMouseEnter={() => pause(t.id)}
               onMouseLeave={() => resume(t.id)}
               role="status"
             >
+              <span style={{ ...styles.accentSpine, background: v.barColor }} />
+
               <div style={styles.row}>
                 <span
                   className="toast-icon-circle"
-                  style={{ ...styles.icon, borderColor: v.border }}
+                  style={{
+                    ...styles.icon,
+                    background: v.accentSoft,
+                    border: `1px solid ${v.accent}55`,
+                  }}
                 >
                   <VariantIcon variant={t.variant} color={v.iconColor} />
                 </span>
                 <span style={styles.message}>{t.message}</span>
+                <button
+                  className="toast-close"
+                  style={styles.closeBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    startExit(t.id);
+                  }}
+                  aria-label="Dismiss"
+                >
+                  ✕
+                </button>
               </div>
 
               <div
@@ -269,14 +308,21 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxWidth: "min(420px, 88vw)",
     background:
       "linear-gradient(160deg, rgba(16,16,18,0.94) 0%, rgba(4,4,6,0.94) 50%, rgba(8,8,10,0.94) 100%)",
-    border: "1px solid rgba(255,255,255,0.1)",
+    border: "1px solid rgba(255,255,255,0.09)",
     borderRadius: 12,
-    padding: "12px 16px",
+    padding: "12px 14px 12px 16px",
     backdropFilter: "blur(20px) saturate(140%)",
     WebkitBackdropFilter: "blur(20px) saturate(140%)",
     cursor: "pointer",
     fontFamily: "'Inter', -apple-system, sans-serif",
     overflow: "hidden",
+  },
+  accentSpine: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 3,
   },
   row: {
     display: "flex",
@@ -285,19 +331,36 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   icon: {
     flexShrink: 0,
-    width: 19,
-    height: 19,
+    width: 22,
+    height: 22,
     borderRadius: "50%",
-    border: "1px solid",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   },
   message: {
+    flex: 1,
+    minWidth: 0,
     color: "#ffffff",
     fontSize: 13.5,
     fontWeight: 500,
-    lineHeight: 1.4,
+    lineHeight: 1.45,
+    letterSpacing: "-0.005em",
+  },
+  closeBtn: {
+    flexShrink: 0,
+    width: 20,
+    height: 20,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "transparent",
+    border: "none",
+    borderRadius: 6,
+    color: "#8a8a94",
+    fontSize: 10,
+    cursor: "pointer",
+    padding: 0,
   },
   barFill: {
     position: "absolute",
@@ -306,5 +369,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     bottom: 0,
     height: 2,
     width: "100%",
+    opacity: 0.85,
   },
 };
