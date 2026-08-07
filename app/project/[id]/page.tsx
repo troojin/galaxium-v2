@@ -115,7 +115,14 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
               >
                 <StudioIcon className={node.className} size={16} />
                 <span className="created-item-name" style={styles.createdItemName}>{node.name}</span>
-                {hasSource ? <span className="created-item-hint">View →</span> : null}
+                {hasSource ? (
+                  <span className="created-item-hint" aria-label="View source">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14" />
+                      <path d="M13 6l6 6-6 6" />
+                    </svg>
+                  </span>
+                ) : null}
               </button>
             );
           })}
@@ -415,7 +422,7 @@ export default function ProjectChatPage() {
         }
         .created-item-name { color: #a8a8b0; transition: color 0.2s ease; }
         .created-item-script:hover .created-item-name { color: #e4e4e8; }
-        .created-item-hint { color: #6a6a74; font-size: 11px; font-weight: 600; margin-left: 2px; transition: color 0.2s ease; }
+        .created-item-hint { display: inline-flex; align-items: center; color: #6a6a74; margin-left: 2px; transition: color 0.2s ease; }
         .created-item-script:hover .created-item-hint { color: #a78bfa; }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
