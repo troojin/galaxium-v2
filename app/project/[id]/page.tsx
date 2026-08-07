@@ -97,37 +97,39 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
     <div style={styles.galaxiumMessage}>
       <p style={styles.explanationText}>{response.explanation}</p>
 
-      <div style={styles.createdSection}>
-        <div style={styles.createdLabel}>Created ({flat.length})</div>
-        <div style={styles.createdGrid}>
-          {flat.map((node, i) => {
-            const hasSource = typeof node.source === "string" && node.source.trim().length > 0;
-            return (
-              <button
-                key={i}
-                onClick={() => hasSource && setActiveScript(node)}
-                className={hasSource ? "created-item-script" : undefined}
-                style={{
-                  ...styles.createdItem,
-                  ...(hasSource ? styles.createdItemScript : styles.createdItemPlain),
-                }}
-                disabled={!hasSource}
-              >
-                <StudioIcon className={node.className} size={16} />
-                <span className="created-item-name" style={styles.createdItemName}>{node.name}</span>
-                {hasSource ? (
-                  <span className="created-item-hint" aria-label="View source">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 12h14" />
-                      <path d="M13 6l6 6-6 6" />
-                    </svg>
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
+      {flat.length > 0 ? (
+        <div style={styles.createdSection}>
+          <div style={styles.createdLabel}>Created ({flat.length})</div>
+          <div style={styles.createdGrid}>
+            {flat.map((node, i) => {
+              const hasSource = typeof node.source === "string" && node.source.trim().length > 0;
+              return (
+                <button
+                  key={i}
+                  onClick={() => hasSource && setActiveScript(node)}
+                  className={hasSource ? "created-item-script" : undefined}
+                  style={{
+                    ...styles.createdItem,
+                    ...(hasSource ? styles.createdItemScript : styles.createdItemPlain),
+                  }}
+                  disabled={!hasSource}
+                >
+                  <StudioIcon className={node.className} size={16} />
+                  <span className="created-item-name" style={styles.createdItemName}>{node.name}</span>
+                  {hasSource ? (
+                    <span className="created-item-hint" aria-label="View source">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14" />
+                        <path d="M13 6l6 6-6 6" />
+                      </svg>
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {response.followUp ? <p style={styles.followUpText}>{response.followUp}</p> : null}
 
@@ -398,17 +400,6 @@ export default function ProjectChatPage() {
           from { opacity: 0; transform: translateY(6px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .cursor-blink::after {
-          content: '▍';
-          display: inline-block;
-          color: #8b5cf6;
-          animation: blink 0.9s step-end infinite;
-          margin-left: 1px;
-          font-size: 0.85em;
-        }
-        @keyframes blink {
-          0%, 100% { opacity: 1; } 50% { opacity: 0; }
-        }
         .node-row:hover { background: rgba(255,255,255,0.03); }
         .source-toggle:hover { color: #c4b5fd !important; border-color: rgba(139,92,246,0.4) !important; }
         .created-item-script {
@@ -488,7 +479,6 @@ export default function ProjectChatPage() {
                     >
                       <div
                         style={msg.role === "user" ? styles.userBubble : styles.assistantBubble}
-                        className={isStreamingThis ? "cursor-blink" : undefined}
                       >
                         {msg.role === "user" ? (
                           msg.content
