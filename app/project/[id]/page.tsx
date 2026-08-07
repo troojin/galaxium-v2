@@ -23,6 +23,8 @@ interface Message {
   created_at: string;
 }
 
+type FeedbackType = "like" | "dislike";
+
 function flattenInstances(
   nodes: RobloxInstanceNode[]
 ): RobloxInstanceNode[] {
@@ -34,6 +36,212 @@ function flattenInstances(
     }
   }
   return out;
+}
+
+function ThumbUpIcon({ filled }: { filled?: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M7 22h-2a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h2M7 22V11m0 11h9.14a3 3 0 0 0 2.97-2.58l1.24-8A3 3 0 0 0 17.38 9H14l1-6c.16-1.1-.63-2-1.75-2-.83 0-1.55.55-1.78 1.34L9.5 9.66" />
+    </svg>
+  );
+}
+
+function ThumbDownIcon({ filled }: { filled?: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M17 2h2a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-2M17 2v11m0-11H7.86a3 3 0 0 0-2.97 2.58l-1.24 8A3 3 0 0 0 6.62 15H10l-1 6c-.16 1.1.63 2 1.75 2 .83 0 1.55-.55 1.78-1.34L14.5 14.34" />
+    </svg>
+  );
+}
+
+function RetryIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 12a9 9 0 1 1-3-6.7" />
+      <path d="M21 3v6h-6" />
+    </svg>
+  );
+}
+
+function MessageFeedbackBar({
+  messageId,
+  projectId,
+  supabase,
+  toast,
+  feedback,
+  onFeedbackChange,
+  onRetry,
+  disabled,
+}: {
+  messageId: string;
+  projectId: string;
+  supabase: ReturnType<typeof createClient>;
+  toast: ReturnType<typeof useToast>;
+  feedback?: FeedbackType;
+  onFeedbackChange: (id: string, type: FeedbackType) => void;
+  onRetry: () => void;
+  disabled: boolean;
+}) {
+  const [dislikeOpen, setDislikeOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [liking, setLiking] = useState(false);
+
+  useEffect(() => {
+    if (!dislikeOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setDislikeOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dislikeOpen]);
+
+  async function saveFeedback(type: FeedbackType, reasonText: string | null) {
+    const { error } = await supabase.from("message_feedback").upsert(
+      {
+        message_id: messageId,
+        project_id: projectId,
+        feedback_type: type,
+        reason: reasonText,
+      },
+      { onConflict: "message_id,user_id" }
+    );
+    return !error;
+  }
+
+  async function handleLike() {
+    if (feedback === "like" || liking) return;
+    setLiking(true);
+    const ok = await saveFeedback("like", null);
+    setLiking(false);
+    if (ok) {
+      onFeedbackChange(messageId, "like");
+      toast.success("Thanks for your feedback!");
+    } else {
+      toast.error("Couldn't save your feedback.");
+    }
+  }
+
+  async function handleDislikeSubmit() {
+    setSubmitting(true);
+    const ok = await saveFeedback("dislike", reason.trim() || null);
+    setSubmitting(false);
+    if (ok) {
+      onFeedbackChange(messageId, "dislike");
+      setDislikeOpen(false);
+      setReason("");
+      toast.success("Thanks for your feedback!");
+    } else {
+      toast.error("Couldn't save your feedback.");
+    }
+  }
+
+  return (
+    <>
+      <div style={styles.feedbackRow}>
+        <button
+          type="button"
+          className="feedback-btn"
+          onClick={handleLike}
+          disabled={liking}
+          aria-label="Good response"
+          aria-pressed={feedback === "like"}
+          style={{
+            ...styles.feedbackBtn,
+            ...(feedback === "like" ? styles.feedbackBtnLikeActive : {}),
+          }}
+        >
+          <ThumbUpIcon filled={feedback === "like"} />
+        </button>
+        <button
+          type="button"
+          className="feedback-btn"
+          onClick={() => setDislikeOpen(true)}
+          aria-label="Bad response"
+          aria-pressed={feedback === "dislike"}
+          style={{
+            ...styles.feedbackBtn,
+            ...(feedback === "dislike" ? styles.feedbackBtnDislikeActive : {}),
+          }}
+        >
+          <ThumbDownIcon filled={feedback === "dislike"} />
+        </button>
+        <button
+          type="button"
+          className="feedback-btn"
+          onClick={onRetry}
+          disabled={disabled}
+          aria-label="Retry"
+          style={styles.feedbackBtn}
+        >
+          <RetryIcon />
+        </button>
+      </div>
+
+      {dislikeOpen ? (
+        <div style={styles.modalOverlay} onClick={() => setDislikeOpen(false)}>
+          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <span style={styles.modalTitle}>What went wrong?</span>
+              <button
+                style={styles.modalCloseBtn}
+                onClick={() => setDislikeOpen(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div style={styles.dislikeBody}>
+              <textarea
+                autoFocus
+                rows={4}
+                placeholder="Tell us what wasn't right (optional)"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                style={styles.dislikeTextarea}
+              />
+              <button
+                type="button"
+                className="send-btn"
+                onClick={handleDislikeSubmit}
+                disabled={submitting}
+                style={styles.dislikeSubmitBtn}
+              >
+                {submitting ? "Submitting…" : "Submit feedback"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
 }
 
 function ScriptPreviewModal({
@@ -159,6 +367,7 @@ export default function ProjectChatPage() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [messageFeedback, setMessageFeedback] = useState<Record<string, FeedbackType>>({});
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [streamingMsgIndex, setStreamingMsgIndex] = useState(0);
@@ -207,8 +416,24 @@ export default function ProjectChatPage() {
         .eq("project_id", params.id)
         .order("created_at", { ascending: true });
       if (!isMounted) return;
-      if (error) toast.error("Couldn't load messages.");
-      else setMessages((data ?? []) as Message[]);
+      if (error) {
+        toast.error("Couldn't load messages.");
+      } else {
+        setMessages((data ?? []) as Message[]);
+      }
+
+      const { data: feedbackRows, error: feedbackError } = await supabase
+        .from("message_feedback")
+        .select("message_id, feedback_type")
+        .eq("project_id", params.id);
+      if (isMounted && !feedbackError && feedbackRows) {
+        const map: Record<string, FeedbackType> = {};
+        for (const row of feedbackRows as { message_id: string; feedback_type: FeedbackType }[]) {
+          map[row.message_id] = row.feedback_type;
+        }
+        setMessageFeedback(map);
+      }
+
       setMessagesLoading(false);
     }
     loadMessages();
@@ -241,6 +466,89 @@ export default function ProjectChatPage() {
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 160) + "px";
   }
+
+  const handleFeedbackChange = useCallback((messageId: string, type: FeedbackType) => {
+    setMessageFeedback((prev) => ({ ...prev, [messageId]: type }));
+  }, []);
+
+  // Shared streaming logic used by both sendMessage and retryMessage.
+  const streamAssistantReply = useCallback(
+    async (
+      history: { role: string; content: string }[],
+      assistantId: string,
+      signal: AbortSignal
+    ) => {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history, projectId: params.id }),
+        signal,
+      });
+
+      if (!res.ok || !res.body) {
+        const errorText = await res.text().catch(() => "");
+        throw new Error(errorText || "Stream failed");
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+      let buffer = "";
+      let streamDone = false;
+
+      const appendDelta = (delta: string) => {
+        fullContent += delta;
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, content: fullContent } : m))
+        );
+      };
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+
+        for (const event of events) {
+          const data = event
+            .split("\n")
+            .filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5).trim())
+            .join("\n");
+
+          if (!data) continue;
+          if (data === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+
+          const parsed = JSON.parse(data);
+          const delta = parsed.choices?.[0]?.delta?.content;
+          if (typeof delta === "string" && delta.length > 0) {
+            appendDelta(delta);
+          }
+        }
+      }
+
+      const tail = buffer.trim();
+      if (tail.startsWith("data:") && tail.slice(5).trim() !== "[DONE]") {
+        const parsed = JSON.parse(tail.slice(5).trim());
+        const delta = parsed.choices?.[0]?.delta?.content;
+        if (typeof delta === "string" && delta.length > 0) {
+          appendDelta(delta);
+        }
+      }
+
+      if (!fullContent.trim()) {
+        throw new Error("The AI returned an empty response.");
+      }
+
+      return fullContent;
+    },
+    [params.id]
+  );
 
   const sendMessage = useCallback(async () => {
     const trimmed = input.trim();
@@ -288,74 +596,7 @@ export default function ProjectChatPage() {
     try {
       abortRef.current = new AbortController();
 
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history, projectId: params.id }),
-        signal: abortRef.current.signal,
-      });
-
-      if (!res.ok || !res.body) {
-        const errorText = await res.text().catch(() => "");
-        throw new Error(errorText || "Stream failed");
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = "";
-      let buffer = "";
-      let streamDone = false;
-
-      const appendDelta = (delta: string) => {
-        fullContent += delta;
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId ? { ...m, content: fullContent } : m
-          )
-        );
-      };
-
-      while (!streamDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split("\n\n");
-        buffer = events.pop() ?? "";
-
-        for (const event of events) {
-          const data = event
-            .split("\n")
-            .filter((line) => line.startsWith("data:"))
-            .map((line) => line.slice(5).trim())
-            .join("\n");
-
-          if (!data) continue;
-          if (data === "[DONE]") {
-            streamDone = true;
-            break;
-          }
-
-          const parsed = JSON.parse(data);
-          const delta = parsed.choices?.[0]?.delta?.content;
-          if (typeof delta === "string" && delta.length > 0) {
-            appendDelta(delta);
-          }
-        }
-      }
-
-      const tail = buffer.trim();
-      if (tail.startsWith("data:") && tail.slice(5).trim() !== "[DONE]") {
-        const parsed = JSON.parse(tail.slice(5).trim());
-        const delta = parsed.choices?.[0]?.delta?.content;
-        if (typeof delta === "string" && delta.length > 0) {
-          appendDelta(delta);
-        }
-      }
-
-      if (!fullContent.trim()) {
-        throw new Error("The AI returned an empty response.");
-      }
+      const fullContent = await streamAssistantReply(history, assistantId, abortRef.current.signal);
 
       const { error: assistantInsertError } = await supabase.from("messages").insert({
         id: assistantId,
@@ -378,7 +619,78 @@ export default function ProjectChatPage() {
       setStreaming(false);
       abortRef.current = null;
     }
-  }, [input, streaming, messages, params.id, supabase, toast]);
+  }, [input, streaming, messages, params.id, supabase, toast, streamAssistantReply]);
+
+  // Regenerates an assistant reply: deletes that message (and anything after
+  // it) both locally and in Supabase, then re-runs the stream from the same
+  // point in the conversation.
+  const retryMessage = useCallback(
+    async (assistantMessageId: string) => {
+      if (streaming) return;
+
+      const idx = messages.findIndex((m) => m.id === assistantMessageId);
+      if (idx === -1) return;
+
+      const toRemove = messages.slice(idx);
+      const history = messages.slice(0, idx).map((m) => ({ role: m.role, content: m.content }));
+
+      if (history.length === 0 || history[history.length - 1].role !== "user") {
+        toast.error("Can't retry this message.");
+        return;
+      }
+
+      const { error: deleteError } = await supabase
+        .from("messages")
+        .delete()
+        .in("id", toRemove.map((m) => m.id));
+
+      if (deleteError) {
+        toast.error("Couldn't retry — try again.");
+        return;
+      }
+
+      setMessages(messages.slice(0, idx));
+      setMessageFeedback((prev) => {
+        const next = { ...prev };
+        for (const m of toRemove) delete next[m.id];
+        return next;
+      });
+
+      const newAssistantId = crypto.randomUUID();
+      setMessages((prev) => [
+        ...prev,
+        { id: newAssistantId, role: "assistant", content: "", created_at: new Date().toISOString() },
+      ]);
+      setStreaming(true);
+
+      try {
+        abortRef.current = new AbortController();
+        const fullContent = await streamAssistantReply(history, newAssistantId, abortRef.current.signal);
+
+        const { error: insertError } = await supabase.from("messages").insert({
+          id: newAssistantId,
+          project_id: params.id,
+          role: "assistant",
+          content: fullContent,
+        });
+
+        if (insertError) {
+          toast.error("Reply sent, but couldn't save it.");
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") {
+          // User cancelled
+        } else {
+          toast.error("Something went wrong. Try again.");
+          setMessages((prev) => prev.filter((m) => m.id !== newAssistantId));
+        }
+      } finally {
+        setStreaming(false);
+        abortRef.current = null;
+      }
+    },
+    [messages, streaming, supabase, params.id, toast, streamAssistantReply]
+  );
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -402,6 +714,8 @@ export default function ProjectChatPage() {
         .send-btn:hover:not(:disabled) { filter: brightness(1.15); }
         .send-btn:disabled { opacity: 0.45; cursor: default; }
         .stop-btn:hover { border-color: rgba(248,113,113,0.5) !important; color: #fca5a5 !important; }
+        .feedback-btn:hover:not(:disabled) { color: #c4b5fd !important; border-color: rgba(139,92,246,0.35) !important; }
+        .feedback-btn:disabled { opacity: 0.4; cursor: default; }
         .glass-sheen { position: relative; }
         .glass-sheen::before {
           content: '';
@@ -533,28 +847,42 @@ export default function ProjectChatPage() {
                       className={msg.role === "assistant" ? "msg-assistant" : undefined}
                       style={msg.role === "user" ? styles.userRow : styles.assistantRow}
                     >
-                      <div
-                        style={msg.role === "user" ? styles.userBubble : styles.assistantBubble}
-                      >
-                        {msg.role === "user" ? (
-                          msg.content
-                        ) : isStreamingThis ? (
-                          <span key={streamingMsgIndex} className="streaming-text" style={styles.generatingText}>{streamingMessages[streamingMsgIndex]}</span>
-                        ) : parsed ? (
-                          <GalaxiumMessageView response={parsed} />
-                        ) : msg.content.trim().startsWith("{") ? (
-                          <div style={styles.rawFallbackWrap}>
-                            <div style={styles.sourceHeader}>
-                              <span style={styles.sourceLang}>Unparsed response</span>
-                            </div>
-                            <pre style={styles.sourceBlock}>
-                              <code>{msg.content}</code>
-                            </pre>
+                      {msg.role === "user" ? (
+                        <div style={styles.userBubble}>{msg.content}</div>
+                      ) : (
+                        <div style={styles.assistantColumn}>
+                          <div style={styles.assistantBubble}>
+                            {isStreamingThis ? (
+                              <span key={streamingMsgIndex} className="streaming-text" style={styles.generatingText}>{streamingMessages[streamingMsgIndex]}</span>
+                            ) : parsed ? (
+                              <GalaxiumMessageView response={parsed} />
+                            ) : msg.content.trim().startsWith("{") ? (
+                              <div style={styles.rawFallbackWrap}>
+                                <div style={styles.sourceHeader}>
+                                  <span style={styles.sourceLang}>Unparsed response</span>
+                                </div>
+                                <pre style={styles.sourceBlock}>
+                                  <code>{msg.content}</code>
+                                </pre>
+                              </div>
+                            ) : (
+                              msg.content
+                            )}
                           </div>
-                        ) : (
-                          msg.content
-                        )}
-                      </div>
+                          {!isStreamingThis ? (
+                            <MessageFeedbackBar
+                              messageId={msg.id}
+                              projectId={params.id as string}
+                              supabase={supabase}
+                              toast={toast}
+                              feedback={messageFeedback[msg.id]}
+                              onFeedbackChange={handleFeedbackChange}
+                              onRetry={() => retryMessage(msg.id)}
+                              disabled={streaming}
+                            />
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -728,6 +1056,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: "flex-start",
     gap: 10,
   },
+  assistantColumn: {
+    display: "flex",
+    flexDirection: "column",
+    width: "100%",
+  },
   assistantAvatar: {
     flexShrink: 0,
     width: 28,
@@ -859,6 +1192,60 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1.6,
     color: "#d4d4dc",
     fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+  },
+  feedbackRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+  },
+  feedbackBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 26,
+    height: 26,
+    background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.09)",
+    borderRadius: 7,
+    color: "#8a8a94",
+    cursor: "pointer",
+    padding: 0,
+    transition: "color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease",
+  },
+  feedbackBtnLikeActive: {
+    color: "#4ade80",
+    borderColor: "rgba(74,222,128,0.4)",
+    background: "rgba(74,222,128,0.1)",
+  },
+  feedbackBtnDislikeActive: {
+    color: "#f87171",
+    borderColor: "rgba(248,113,113,0.4)",
+    background: "rgba(248,113,113,0.1)",
+  },
+  dislikeBody: {
+    padding: 14,
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+  },
+  dislikeTextarea: {
+    width: "100%",
+    resize: "vertical",
+    minHeight: 90,
+    background: "rgba(0,0,0,0.4)",
+    border: "1px solid rgba(255,255,255,0.09)",
+    borderRadius: 8,
+    color: "#e4e4e8",
+    fontSize: 13.5,
+    lineHeight: 1.6,
+    padding: "10px 12px",
+    fontFamily: "inherit",
+  },
+  dislikeSubmitBtn: {
+    alignSelf: "flex-end",
+    padding: "7px 14px",
+    fontSize: 12.5,
   },
   modalOverlay: {
     position: "fixed",
