@@ -552,22 +552,20 @@ export default function ProjectChatPage() {
                 style={styles.textarea}
                 disabled={streaming}
               />
-              <div style={styles.inputActions}>
-                {streaming ? (
-                  <button className="stop-btn" style={styles.stopBtn} onClick={stopStreaming}>
-                    ◼ Stop
-                  </button>
-                ) : (
-                  <button
-                    className="send-btn"
-                    style={styles.sendBtn}
-                    onClick={sendMessage}
-                    disabled={!input.trim() || streaming}
-                  >
-                    Send ↑
-                  </button>
-                )}
-              </div>
+              {streaming ? (
+                <button className="stop-btn" style={styles.stopBtn} onClick={stopStreaming}>
+                  ◼ Stop
+                </button>
+              ) : (
+                <button
+                  className="send-btn"
+                  style={styles.sendBtn}
+                  onClick={sendMessage}
+                  disabled={!input.trim() || streaming}
+                >
+                  Send ↑
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -935,39 +933,38 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   inputCard: {
     position: "relative",
+    display: "flex",
+    alignItems: "flex-end",
+    gap: 8,
     background: "linear-gradient(160deg, rgba(12,12,14,0.8) 0%, rgba(0,0,0,0.75) 50%, rgba(6,6,8,0.8) 100%)",
     border: "1px solid rgba(255,255,255,0.09)",
     borderRadius: 14,
     backdropFilter: "blur(24px) saturate(140%)",
     WebkitBackdropFilter: "blur(24px) saturate(140%)",
     boxShadow: "0 8px 32px -8px rgba(0,0,0,0.7)",
-    padding: "10px 12px 8px",
+    padding: "9px 9px 9px 12px",
   },
   textarea: {
-    width: "100%",
+    flex: 1,
+    minWidth: 0,
     background: "transparent",
     border: "none",
     resize: "none",
     color: "#ffffff",
     fontSize: 14,
     lineHeight: 1.5,
-    padding: "1px 4px",
+    padding: "6px 4px",
     minHeight: 20,
     maxHeight: 120,
     overflowY: "auto",
   },
-  inputActions: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    marginTop: 6,
-  },
   sendBtn: {
+    flexShrink: 0,
     background: "linear-gradient(160deg, rgba(124,77,225,0.85) 0%, rgba(91,33,182,0.85) 100%)",
     color: "#ffffff",
     border: "1px solid rgba(255,255,255,0.12)",
     borderRadius: 7,
-    padding: "5px 12px",
+    padding: "6px 12px",
     fontSize: 12.5,
     fontWeight: 600,
     cursor: "pointer",
@@ -975,11 +972,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     transition: "filter 0.15s ease",
   },
   stopBtn: {
+    flexShrink: 0,
     background: "transparent",
     color: "#f87171",
     border: "1px solid rgba(248,113,113,0.25)",
     borderRadius: 7,
-    padding: "5px 12px",
+    padding: "6px 12px",
     fontSize: 12.5,
     fontWeight: 600,
     cursor: "pointer",
