@@ -7,6 +7,7 @@ import { useToast } from "@/components/toast";
 import { StudioIcon } from "@/components/studio-icon";
 import { parseGalaxiumResponse } from "@/lib/ai/rules";
 import type { GalaxiumResponse, RobloxInstanceNode } from "@/lib/ai/rules";
+import streamingMessages from "@/data/streaming-messages.json";
 
 interface Project {
   id: string;
@@ -153,6 +154,7 @@ export default function ProjectChatPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [streamingMsgIndex, setStreamingMsgIndex] = useState(0);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -209,6 +211,22 @@ export default function ProjectChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streaming]);
+
+  useEffect(() => {
+    if (!streaming) return;
+    setStreamingMsgIndex(Math.floor(Math.random() * streamingMessages.length));
+    const interval = setInterval(() => {
+      setStreamingMsgIndex((prev) => {
+        if (streamingMessages.length <= 1) return prev;
+        let next = Math.floor(Math.random() * streamingMessages.length);
+        while (next === prev) {
+          next = Math.floor(Math.random() * streamingMessages.length);
+        }
+        return next;
+      });
+    }, 1800);
+    return () => clearInterval(interval);
+  }, [streaming]);
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);
@@ -400,6 +418,11 @@ export default function ProjectChatPage() {
           from { opacity: 0; transform: translateY(6px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        .streaming-text { display: inline-block; animation: streamTextIn 0.25s ease; }
+        @keyframes streamTextIn {
+          from { opacity: 0; transform: translateY(2px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
         .node-row:hover { background: rgba(255,255,255,0.03); }
         .source-toggle:hover { color: #c4b5fd !important; border-color: rgba(139,92,246,0.4) !important; }
         .created-item-script {
@@ -483,7 +506,7 @@ export default function ProjectChatPage() {
                         {msg.role === "user" ? (
                           msg.content
                         ) : isStreamingThis ? (
-                          <span style={styles.generatingText}>Building your Roblox instances…</span>
+                          <span key={streamingMsgIndex} className="streaming-text" style={styles.generatingText}>{streamingMessages[streamingMsgIndex]}</span>
                         ) : parsed ? (
                           <GalaxiumMessageView response={parsed} />
                         ) : msg.content.trim().startsWith("{") ? (
