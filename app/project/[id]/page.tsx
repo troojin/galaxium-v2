@@ -25,6 +25,17 @@ interface Message {
 
 type FeedbackType = "like" | "dislike";
 
+function isTruncatedJson(content: string): boolean {
+  const trimmed = content.trim();
+  if (!trimmed.startsWith("{")) return false;
+  try {
+    JSON.parse(trimmed);
+    return false; // valid JSON — just didn't match the expected schema, not a truncation
+  } catch {
+    return true; // starts like JSON but doesn't parse — almost certainly cut off mid-generation
+  }
+}
+
 function flattenInstances(
   nodes: RobloxInstanceNode[]
 ): RobloxInstanceNode[] {
@@ -714,7 +725,7 @@ export default function ProjectChatPage() {
         .send-btn:hover:not(:disabled) { filter: brightness(1.15); }
         .send-btn:disabled { opacity: 0.45; cursor: default; }
         .stop-btn:hover { border-color: rgba(248,113,113,0.5) !important; color: #fca5a5 !important; }
-        .feedback-btn:hover:not(:disabled) { color: #c4b5fd !important; border-color: rgba(139,92,246,0.35) !important; }
+        .feedback-btn:hover:not(:disabled) { color: #c4b5fd !important; background: rgba(139,92,246,0.1) !important; }
         .feedback-btn:disabled { opacity: 0.4; cursor: default; }
         .glass-sheen { position: relative; }
         .glass-sheen::before {
@@ -856,6 +867,21 @@ export default function ProjectChatPage() {
                               <span key={streamingMsgIndex} className="streaming-text" style={styles.generatingText}>{streamingMessages[streamingMsgIndex]}</span>
                             ) : parsed ? (
                               <GalaxiumMessageView response={parsed} />
+                            ) : msg.content.trim().startsWith("{") && isTruncatedJson(msg.content) ? (
+                              <div style={styles.truncatedWrap}>
+                                <p style={styles.truncatedText}>
+                                  This response got cut off before it finished generating.
+                                </p>
+                                <button
+                                  type="button"
+                                  className="send-btn"
+                                  style={styles.truncatedRetryBtn}
+                                  onClick={() => retryMessage(msg.id)}
+                                  disabled={streaming}
+                                >
+                                  Retry
+                                </button>
+                              </div>
                             ) : msg.content.trim().startsWith("{") ? (
                               <div style={styles.rawFallbackWrap}>
                                 <div style={styles.sourceHeader}>
@@ -1193,6 +1219,27 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#d4d4dc",
     fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
   },
+  truncatedWrap: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    background: "rgba(248,113,113,0.06)",
+    border: "1px solid rgba(248,113,113,0.2)",
+    borderRadius: 10,
+    padding: "12px 14px",
+  },
+  truncatedText: {
+    margin: 0,
+    color: "#e4a5a5",
+    fontSize: 13,
+    lineHeight: 1.6,
+  },
+  truncatedRetryBtn: {
+    flexShrink: 0,
+    padding: "6px 14px",
+    fontSize: 12.5,
+  },
   feedbackRow: {
     display: "flex",
     alignItems: "center",
@@ -1205,23 +1252,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     justifyContent: "center",
     width: 26,
     height: 26,
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.09)",
-    borderRadius: 7,
-    color: "#8a8a94",
+    background: "transparent",
+    border: "none",
+    borderRadius: 6,
+    color: "#7a7a85",
     cursor: "pointer",
     padding: 0,
-    transition: "color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease",
+    transition: "color 0.15s ease, background-color 0.15s ease",
   },
   feedbackBtnLikeActive: {
     color: "#4ade80",
-    borderColor: "rgba(74,222,128,0.4)",
-    background: "rgba(74,222,128,0.1)",
   },
   feedbackBtnDislikeActive: {
     color: "#f87171",
-    borderColor: "rgba(248,113,113,0.4)",
-    background: "rgba(248,113,113,0.1)",
   },
   dislikeBody: {
     padding: 14,
