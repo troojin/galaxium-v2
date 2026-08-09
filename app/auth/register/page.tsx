@@ -17,7 +17,6 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
@@ -86,7 +85,6 @@ export default function SignupPage() {
       password,
       options: {
         data: { username: cleanUsername },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
@@ -102,8 +100,8 @@ export default function SignupPage() {
       return;
     }
 
-    toast.success("Confirmation email sent");
-    setSubmitted(true);
+    toast.success("Account created");
+    router.replace("/dashboard");
   };
 
   if (checkingSession) {
@@ -164,148 +162,98 @@ export default function SignupPage() {
           border-width: 0 2px 2px 0;
           transform: rotate(45deg);
         }
-
-        @keyframes fadeSlideUp {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes popIn {
-          0% { opacity: 0; transform: scale(0.85); }
-          70% { opacity: 1; transform: scale(1.03); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-        @keyframes badgeFadeIn {
-          from { opacity: 0; transform: translateY(6px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .confirm-wrap {
-          animation: fadeSlideUp 0.45s ease-out;
-        }
-        .confirm-icon {
-          animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .protected-badge-anim {
-          animation: badgeFadeIn 0.5s ease-out 0.35s both;
-        }
       `}</style>
 
       <div className="glass-sheen" style={styles.card}>
-        {submitted ? (
-          <div className="confirm-wrap">
-            <div className="confirm-icon" style={styles.confirmIconWrap}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="11" fill="rgba(139,92,246,0.15)" stroke="#8b5cf6" strokeWidth="1.5" />
-                <path d="M7 12.5L10.2 15.5L17 8.5" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+        <h1 style={styles.title}>Create your account</h1>
+        <p style={styles.subtitle}>Get started in just a minute</p>
 
-            <h1 style={styles.title}>Check your email</h1>
-            <p style={{ ...styles.subtitle, marginBottom: 0 }}>
-              We sent a confirmation link to <strong style={{ color: "#d4d4dc" }}>{email}</strong>.
-              Click it to activate your account.
-            </p>
-
-            <div className="protected-badge-anim" style={styles.protectedBadge}>
-              <svg width="14" height="14" viewBox="0 0 109 113" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M63.7076 110.284C61.8481 112.648 58.0453 111.412 57.9438 108.435L56.9633 51.8974H109L63.7076 110.284Z" fill="#3ECF8E" />
-                <path d="M45.317 2.07103C47.1765 -0.293 50.9793 0.943 51.0808 3.92L52.0613 60.4826H0.0246L45.317 2.07103Z" fill="#3ECF8E" />
-              </svg>
-              <span style={styles.protectedText}>Protected by Supabase</span>
-            </div>
+        <form onSubmit={handleSubmit} style={styles.form} noValidate>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Username</label>
+            <input
+              type="text"
+              placeholder="troojin"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              style={styles.input}
+              disabled={loading}
+            />
           </div>
-        ) : (
-          <>
-            <h1 style={styles.title}>Create your account</h1>
-            <p style={styles.subtitle}>Get started in just a minute</p>
 
-            <form onSubmit={handleSubmit} style={styles.form} noValidate>
-              <div style={styles.fieldGroup}>
-                <label style={styles.label}>Username</label>
-                <input
-                  type="text"
-                  placeholder="troojin"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  style={styles.input}
-                  disabled={loading}
-                />
-              </div>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Email</label>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={styles.input}
+              disabled={loading}
+            />
+          </div>
 
-              <div style={styles.fieldGroup}>
-                <label style={styles.label}>Email</label>
-                <input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={styles.input}
-                  disabled={loading}
-                />
-              </div>
-
-              <div style={styles.fieldGroup}>
-                <label style={styles.label}>Password</label>
-                <div style={styles.passwordWrap}>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    style={{ ...styles.input, paddingRight: 44 }}
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((s) => !s)}
-                    style={styles.eyeBtn}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    disabled={loading}
-                  >
-                    {showPassword ? "🙈" : "👁"}
-                  </button>
-                </div>
-              </div>
-
-              <div style={styles.fieldGroup}>
-                <label style={styles.label}>Confirm password</label>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  style={styles.input}
-                  disabled={loading}
-                />
-              </div>
-
-              <label className="checkbox-wrap" style={styles.checkboxRow}>
-                <input
-                  type="checkbox"
-                  checked={agreed}
-                  onChange={(e) => setAgreed(e.target.checked)}
-                  disabled={loading}
-                />
-                <span style={styles.checkboxLabel}>
-                  I agree to the <a href="#" style={styles.link}>Terms of Service</a> and{" "}
-                  <a href="#" style={styles.link}>Privacy Policy</a>
-                </span>
-              </label>
-
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Password</label>
+            <div style={styles.passwordWrap}>
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ ...styles.input, paddingRight: 44 }}
+                disabled={loading}
+              />
               <button
-                type="submit"
-                className="primary-btn"
-                style={styles.submitBtn}
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                style={styles.eyeBtn}
+                aria-label={showPassword ? "Hide password" : "Show password"}
                 disabled={loading}
               >
-                {loading ? "Creating account…" : "Create account"}
+                {showPassword ? "🙈" : "👁"}
               </button>
-            </form>
+            </div>
+          </div>
 
-            <p style={{ ...styles.footerText, marginTop: 24 }}>
-              Already have an account? <a href="/login" style={styles.link}>Sign in</a>
-            </p>
-          </>
-        )}
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Confirm password</label>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              style={styles.input}
+              disabled={loading}
+            />
+          </div>
+
+          <label className="checkbox-wrap" style={styles.checkboxRow}>
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              disabled={loading}
+            />
+            <span style={styles.checkboxLabel}>
+              I agree to the <a href="#" style={styles.link}>Terms of Service</a> and{" "}
+              <a href="#" style={styles.link}>Privacy Policy</a>
+            </span>
+          </label>
+
+          <button
+            type="submit"
+            className="primary-btn"
+            style={styles.submitBtn}
+            disabled={loading}
+          >
+            {loading ? "Creating account…" : "Create account"}
+          </button>
+        </form>
+
+        <p style={{ ...styles.footerText, marginTop: 24 }}>
+          Already have an account? <a href="/login" style={styles.link}>Sign in</a>
+        </p>
       </div>
     </div>
   );
@@ -336,11 +284,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     WebkitBackdropFilter: "blur(40px) saturate(140%)",
     boxShadow: "0 24px 60px -12px rgba(0,0,0,0.8), 0 4px 16px rgba(0,0,0,0.5)",
     overflow: "hidden",
-  },
-  confirmIconWrap: {
-    display: "flex",
-    justifyContent: "center",
-    marginBottom: 16,
   },
   title: {
     color: "#ffffff",
@@ -436,18 +379,5 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 13,
     marginTop: 22,
     marginBottom: 0,
-  },
-  protectedBadge: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 20,
-  },
-  protectedText: {
-    color: "#6b6b74",
-    fontSize: 11.5,
-    fontWeight: 500,
-    letterSpacing: "0.01em",
   },
 };
