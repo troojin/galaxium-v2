@@ -4,7 +4,6 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { randomBytes } from "crypto";
 
-// Service-role client for the actual write.
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -15,7 +14,6 @@ function generateApiKey() {
 }
 
 export async function POST(req: Request) {
-  // Identify the logged-in user from their browser session cookies.
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,7 +21,7 @@ export async function POST(req: Request) {
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
-        setAll: () => {}, // no-op: this route doesn't need to refresh cookies
+        setAll: () => {},
       },
     }
   );
@@ -37,16 +35,16 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => null);
-  const code = body?.code?.toUpperCase?.();
+  const sessionId = body?.sessionId;
 
-  if (typeof code !== "string" || code.length === 0) {
-    return NextResponse.json({ error: "Missing code" }, { status: 400 });
+  if (typeof sessionId !== "string" || sessionId.length === 0) {
+    return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
   }
 
   const { data: session, error: fetchError } = await supabaseAdmin
     .from("plugin_auth_sessions")
     .select("status, expires_at")
-    .eq("code", code)
+    .eq("code", sessionId)
     .maybeSingle();
 
   if (fetchError) {
@@ -55,11 +53,11 @@ export async function POST(req: Request) {
   }
 
   if (!session || new Date(session.expires_at) < new Date()) {
-    return NextResponse.json({ error: "Code expired" }, { status: 410 });
+    return NextResponse.json({ error: "This sign-in link expired" }, { status: 410 });
   }
 
   if (session.status === "confirmed") {
-    return NextResponse.json({ error: "Code already used" }, { status: 409 });
+    return NextResponse.json({ success: true });
   }
 
   const apiKey = generateApiKey();
@@ -71,15 +69,13 @@ export async function POST(req: Request) {
       user_id: user.id,
       api_key: apiKey,
     })
-    .eq("code", code);
+    .eq("code", sessionId);
 
   if (updateError) {
     console.error("plugin auth confirm update error:", updateError);
     return NextResponse.json({ error: "Failed to confirm" }, { status: 500 });
   }
 
-  // Also persist the key against the user's account so you can list/revoke
-  // plugin connections later from account settings.
   await supabaseAdmin.from("plugin_api_keys").insert({
     user_id: user.id,
     api_key: apiKey,

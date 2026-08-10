@@ -8,16 +8,16 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
-  const code = body?.code;
+  const sessionId = body?.sessionId;
 
-  if (typeof code !== "string" || code.length === 0) {
-    return NextResponse.json({ error: "Missing code" }, { status: 400 });
+  if (typeof sessionId !== "string" || sessionId.length === 0) {
+    return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
   }
 
   const { data: session, error } = await supabase
     .from("plugin_auth_sessions")
     .select("status, api_key, expires_at")
-    .eq("code", code)
+    .eq("code", sessionId)
     .maybeSingle();
 
   if (error) {
@@ -25,11 +25,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
   }
 
-  if (!session) {
-    return NextResponse.json({ status: "expired" });
-  }
-
-  if (new Date(session.expires_at) < new Date()) {
+  if (!session || new Date(session.expires_at) < new Date()) {
     return NextResponse.json({ status: "expired" });
   }
 
