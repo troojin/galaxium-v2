@@ -2,12 +2,20 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { randomBytes } from "crypto";
 
 export const runtime = 'edge';
 
+function randomHex(bytes: number) {
+  const values = new Uint8Array(bytes);
+  crypto.getRandomValues(values);
+
+  return Array.from(values, (value) =>
+    value.toString(16).padStart(2, "0")
+  ).join("");
+}
+
 function generateApiKey() {
-  return "gal_" + randomBytes(24).toString("hex");
+  return "gal_" + randomHex(24);
 }
 
 export async function POST(req: Request) {
