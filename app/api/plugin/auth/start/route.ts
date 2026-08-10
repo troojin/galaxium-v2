@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { randomBytes } from "crypto";
 
 export const runtime = 'edge';
 
+function randomHex(bytes: number) {
+  const values = new Uint8Array(bytes);
+  crypto.getRandomValues(values);
+
+  return Array.from(values, (value) =>
+    value.toString(16).padStart(2, "0")
+  ).join("");
+}
+
 function generateSessionId() {
-  return randomBytes(16).toString("hex");
+  return randomHex(16);
 }
 
 export async function POST() {
