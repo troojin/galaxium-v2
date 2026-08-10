@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 
+export const runtime = 'edge';
+
 export default function ConnectPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const router = useRouter();

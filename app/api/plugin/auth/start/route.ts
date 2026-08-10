@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
 
+export const runtime = 'edge';
+
 function generateSessionId() {
   return randomBytes(16).toString("hex");
 }

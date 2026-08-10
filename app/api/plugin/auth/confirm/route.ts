@@ -4,6 +4,8 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { randomBytes } from "crypto";
 
+export const runtime = 'edge';
+
 function generateApiKey() {
   return "gal_" + randomBytes(24).toString("hex");
 }
