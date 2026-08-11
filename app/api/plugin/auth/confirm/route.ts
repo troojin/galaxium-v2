@@ -86,7 +86,7 @@ export async function POST(req: Request) {
       console.error("plugin auth confirm update error:", updateError);
       return NextResponse.json({ error: "Failed to confirm" }, { status: 500 });
     }
-
+ 
     const { error: insertError } = await supabaseAdmin.from("plugin_api_keys").insert({
       user_id: user.id,
       api_key: apiKey,
