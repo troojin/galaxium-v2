@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
     if (fetchError) {
       console.error("plugin auth confirm lookup error:", fetchError);
-      return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
+      return NextResponse.json({ error: fetchError.message }, { status: 500 });
     }
 
     if (!session || new Date(session.expires_at) < new Date()) {
@@ -84,9 +84,9 @@ export async function POST(req: Request) {
 
     if (updateError) {
       console.error("plugin auth confirm update error:", updateError);
-      return NextResponse.json({ error: "Failed to confirm" }, { status: 500 });
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
- 
+
     const { error: insertError } = await supabaseAdmin.from("plugin_api_keys").insert({
       user_id: user.id,
       api_key: apiKey,
@@ -94,7 +94,15 @@ export async function POST(req: Request) {
 
     if (insertError) {
       console.error("plugin auth confirm api key insert error:", insertError);
-      return NextResponse.json({ error: "Failed to store API key" }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint,
+          code: insertError.code,
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true });
