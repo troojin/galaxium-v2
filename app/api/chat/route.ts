@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
     const stream = await createChatCompletionStream({
       messages: [SYSTEM_PROMPT, ...trimmed],
       temperature: 0.7,
-      max_tokens: 1024,
+      max_tokens: 16384,
     });
 
     return new Response(stream, {
