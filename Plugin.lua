@@ -3,12 +3,18 @@ local HttpService = game:GetService("HttpService")
 local API_BASE = "https://galaxium.lol/api/plugin"
 local SETTING_KEY = "galaxiumApiKey"
 
+local DEBUG = false
+
 local function log(message)
-	print("[gonna change it soon]", message)
+	if DEBUG then
+		print("[Galaxium]", message)
+	end
 end
 
 local function warn(message)
-	print("[gonna change it soon] WARN:", message)
+	if DEBUG then
+		print("[Galaxium] WARN:", message)
+	end
 end
 
 local toolbar = plugin:CreateToolbar("Galaxium AI")
@@ -178,8 +184,13 @@ local function request(method, path, body)
 		warn("request failed to send: " .. tostring(res))
 		return nil, tostring(res)
 	end
+
+	log("response status: " .. tostring(res.StatusCode))
+	log("response body: " .. tostring(res.Body))
+
 	if not res.Success then
 		warn("request returned non-success: " .. tostring(res.StatusCode))
+		warn("response body: " .. tostring(res.Body))
 		return nil, "HTTP " .. tostring(res.StatusCode)
 	end
 
@@ -203,6 +214,7 @@ local function pollAuth(sessionId)
 			return nil, "cancelled"
 		end
 
+		log("poll attempt " .. tostring(attempt))
 		local data, err = request("POST", "/auth/poll", { sessionId = sessionId })
 		if data then
 			log("poll attempt " .. tostring(attempt) .. " status: " .. tostring(data.status))
@@ -237,7 +249,8 @@ local function beginSignIn()
 		return
 	end
 
-	log("session started: " .. session.sessionId)
+	print("Connect: https://galaxium.lol/connect/" .. session.sessionId)
+
 	codeLabel.Text = string.format("Open this link to connect:\ngalaxium.lol/connect/%s", session.sessionId)
 	statusLabel.Text = "Waiting for confirmation..."
 	isPolling = true
