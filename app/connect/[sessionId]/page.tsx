@@ -136,7 +136,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   page: {
     minHeight: "100vh",
     width: "100%",
-    background: "#ffffff",
+    background: "#0a0a0a",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -148,13 +148,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     textAlign: "center",
   },
   title: {
-    color: "#111111",
+    color: "#ffffff",
     fontSize: 20,
     fontWeight: 600,
     margin: "0 0 8px",
   },
   subtitle: {
-    color: "#666666",
+    color: "#a1a1a1",
     fontSize: 14,
     margin: "0 0 24px",
     lineHeight: 1.5,
@@ -173,7 +173,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   footerText: {
     textAlign: "center",
-    color: "#666666",
+    color: "#a1a1a1",
     fontSize: 13,
     marginTop: 16,
     marginBottom: 0,
