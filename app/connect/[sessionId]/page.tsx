@@ -64,38 +64,22 @@ export default function ConnectPage() {
   return (
     <div style={styles.page}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
-        .primary-btn:hover { filter: brightness(1.12); }
-        .glass-sheen::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0;
-          height: 60%;
-          background: linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.008) 60%, rgba(255,255,255,0) 100%);
-          border-radius: 24px 24px 0 0;
-          pointer-events: none;
-        }
-        .glass-sheen::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: 24px;
-          box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.25), inset 0 -0.5px 0 rgba(255,255,255,0.03);
-          pointer-events: none;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+        * { box-sizing: border-box; font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        .primary-btn:hover { background: #6d28d9; }
+        .link:hover { text-decoration: underline; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner {
-          width: 28px; height: 28px;
-          border: 3px solid rgba(255,255,255,0.15);
-          border-top-color: #a78bfa;
+          width: 20px; height: 20px;
+          border: 2px solid #e5ddfa;
+          border-top-color: #7c3aed;
           border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-          margin: 0 auto 16px;
+          animation: spin 0.7s linear infinite;
+          margin: 0 auto 20px;
         }
       `}</style>
 
-      <div className="glass-sheen" style={styles.card}>
+      <div style={styles.card}>
         {phase === "checking" && (
           <>
             <div className="spinner" />
@@ -112,22 +96,25 @@ export default function ConnectPage() {
 
         {phase === "loggedOut" && (
           <>
-            <h1 style={styles.title}>Connect Studio Plugin</h1>
+            <h1 style={styles.title}>Connect Studio plugin</h1>
             <p style={styles.subtitle}>
-              Log into your Galaxium account to finish connecting the plugin.
+              Log in to your Galaxium account to finish connecting the plugin.
             </p>
             <button className="primary-btn" style={styles.submitBtn} onClick={goToLogin}>
               Log in
             </button>
             <p style={styles.footerText}>
-              Don&apos;t have an account? <a style={styles.link} onClick={goToSignup}>Sign up</a>
+              Don&apos;t have an account?{" "}
+              <a className="link" style={styles.link} onClick={goToSignup}>
+                Sign up
+              </a>
             </p>
           </>
         )}
 
         {phase === "done" && (
           <>
-            <h1 style={styles.title}>Plugin connected ✓</h1>
+            <h1 style={styles.title}>Plugin connected</h1>
             <p style={styles.subtitle}>
               You can close this tab and go back to Roblox Studio.
             </p>
@@ -137,7 +124,7 @@ export default function ConnectPage() {
         {phase === "error" && (
           <>
             <h1 style={styles.title}>Couldn&apos;t connect</h1>
-            <p style={{ ...styles.subtitle, color: "#f87171" }}>{errorMessage}</p>
+            <p style={{ ...styles.subtitle, color: "#e11d48" }}>{errorMessage}</p>
           </>
         )}
       </div>
@@ -149,69 +136,51 @@ const styles: { [key: string]: React.CSSProperties } = {
   page: {
     minHeight: "100vh",
     width: "100%",
-    background: "#0a0a0a",
+    background: "#ffffff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
-    overflow: "hidden",
     padding: 24,
   },
   card: {
-    position: "relative",
-    zIndex: 1,
-    maxWidth: 400,
+    maxWidth: 360,
     width: "100%",
-    background:
-      "linear-gradient(160deg, rgba(12,12,14,0.7) 0%, rgba(0,0,0,0.65) 50%, rgba(6,6,8,0.7) 100%)",
-    border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: 24,
-    padding: "40px 32px",
-    backdropFilter: "blur(40px) saturate(140%)",
-    WebkitBackdropFilter: "blur(40px) saturate(140%)",
-    boxShadow: "0 24px 60px -12px rgba(0,0,0,0.8), 0 4px 16px rgba(0,0,0,0.5)",
-    overflow: "hidden",
     textAlign: "center",
   },
   title: {
-    color: "#ffffff",
-    fontSize: 24,
-    fontWeight: 700,
-    margin: "0 0 6px",
-    letterSpacing: "-0.02em",
+    color: "#111111",
+    fontSize: 20,
+    fontWeight: 600,
+    margin: "0 0 8px",
   },
   subtitle: {
-    color: "#9a9aa5",
+    color: "#666666",
     fontSize: 14,
     margin: "0 0 24px",
     lineHeight: 1.5,
   },
   submitBtn: {
     width: "100%",
-    background:
-      "linear-gradient(160deg, rgba(124,77,225,0.85) 0%, rgba(91,33,182,0.85) 100%)",
+    background: "#7c3aed",
     color: "#ffffff",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 12,
-    padding: "13px 0",
-    fontSize: 15,
-    fontWeight: 600,
+    border: "none",
+    borderRadius: 6,
+    padding: "12px 0",
+    fontSize: 14,
+    fontWeight: 500,
     cursor: "pointer",
-    boxShadow:
-      "0 4px 16px rgba(91,33,182,0.4), inset 0 0.5px 0 rgba(255,255,255,0.2)",
-    transition: "filter 0.2s",
+    transition: "background 0.15s",
   },
   footerText: {
     textAlign: "center",
-    color: "#9a9aa5",
+    color: "#666666",
     fontSize: 13,
-    marginTop: 18,
+    marginTop: 16,
     marginBottom: 0,
   },
   link: {
-    color: "#a78bfa",
+    color: "#7c3aed",
     fontSize: 13,
-    textDecoration: "none",
     fontWeight: 500,
     cursor: "pointer",
   },
