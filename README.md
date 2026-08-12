@@ -11,8 +11,8 @@ Galaxium is an AI-powered Roblox Studio plugin that helps you build and script R
   
 ## Links
 
-- Website: https://galaxium.lol
+https://galaxium.lol
 
 ## License
 
-All rights reserved.
+mit
