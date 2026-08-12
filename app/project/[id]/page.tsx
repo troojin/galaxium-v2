@@ -420,6 +420,7 @@ export default function ProjectChatPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pluginConnected, setPluginConnected] = useState(false);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -497,6 +498,38 @@ export default function ProjectChatPage() {
     loadMessages();
     return () => { isMounted = false; };
   }, [params.id, project, supabase]);
+
+  // Poll the plugin_presence table so the topbar dot reflects whether the
+  // Roblox Studio plugin currently has this project open (heartbeats every
+  // ~10s from the plugin; treated as stale after 20s of silence).
+  useEffect(() => {
+    if (!project) return;
+    let isMounted = true;
+
+    async function checkPresence() {
+      const { data } = await supabase
+        .from("plugin_presence")
+        .select("last_seen_at")
+        .eq("project_id", project!.id)
+        .maybeSingle();
+
+      if (!isMounted) return;
+
+      if (data) {
+        const secondsAgo = (Date.now() - new Date(data.last_seen_at).getTime()) / 1000;
+        setPluginConnected(secondsAgo < 20);
+      } else {
+        setPluginConnected(false);
+      }
+    }
+
+    checkPresence();
+    const interval = setInterval(checkPresence, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [project, supabase]);
 
   useEffect(() => {
     if (!isNearBottomRef.current) return;
@@ -826,6 +859,10 @@ export default function ProjectChatPage() {
           from { opacity: 0; transform: scale(0.94) translateY(6px); }
           to   { opacity: 1; transform: scale(1) translateY(0); }
         }
+        @keyframes presencePulse {
+          0%, 100% { box-shadow: 0 0 6px 2px rgba(74,222,128,0.6); }
+          50%      { box-shadow: 0 0 10px 4px rgba(74,222,128,0.85); }
+        }
         .node-row:hover { background: rgba(255,255,255,0.03); }
         .source-toggle:hover { color: #c4b5fd !important; border-color: rgba(139,92,246,0.4) !important; }
         .created-item-script {
@@ -871,7 +908,19 @@ export default function ProjectChatPage() {
       <header style={styles.topbar}>
         <div style={styles.topbarSide} />
         <div style={styles.topbarCenter}>
-          {project ? <span style={styles.projectName}>{project.name}</span> : null}
+          {project ? (
+            <span style={styles.projectNameRow}>
+              <span
+                style={{
+                  ...styles.presenceDot,
+                  ...(pluginConnected ? styles.presenceDotOn : styles.presenceDotOff),
+                }}
+                aria-label={pluginConnected ? "Plugin connected" : "Plugin not connected"}
+                title={pluginConnected ? "Roblox Studio plugin connected" : "Roblox Studio plugin not connected"}
+              />
+              <span style={styles.projectName}>{project.name}</span>
+            </span>
+          ) : null}
         </div>
         <div style={styles.topbarSide}>
           <button
@@ -1061,6 +1110,27 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-end",
+  },
+  projectNameRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  presenceDot: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    flexShrink: 0,
+    transition: "background-color 0.3s ease, box-shadow 0.3s ease",
+  },
+  presenceDotOn: {
+    background: "#4ade80",
+    boxShadow: "0 0 6px 2px rgba(74,222,128,0.6)",
+    animation: "presencePulse 2s ease-in-out infinite",
+  },
+  presenceDotOff: {
+    background: "#4a4a52",
+    boxShadow: "none",
   },
   projectName: {
     color: "#d4d4dc",
