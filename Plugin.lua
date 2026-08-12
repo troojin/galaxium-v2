@@ -254,7 +254,7 @@ local function startHeartbeat()
 		while heartbeatRunning do
 			local apiKey = plugin:GetSetting(SETTING_KEY)
 			if apiKey and currentProjectId then
-				local _, err = request("POST", "/presence", { projectId = currentProjectId }, apiKey)
+				local _, err = request("POST", "/projects/presence", { projectId = currentProjectId }, apiKey)
 				if err then
 					warn("heartbeat failed: " .. tostring(err))
 				end
