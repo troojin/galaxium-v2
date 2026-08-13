@@ -839,11 +839,6 @@ export default function ProjectChatPage() {
           from { opacity: 0; transform: translateY(6px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .streaming-text { display: inline-block; animation: streamTextIn 0.25s ease; }
-        @keyframes streamTextIn {
-          from { opacity: 0; transform: translateY(2px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
         .content-fade-in { animation: contentFadeIn 0.4s ease; }
         @keyframes contentFadeIn {
           from { opacity: 0; transform: translateY(14px); }
@@ -984,7 +979,9 @@ export default function ProjectChatPage() {
                         <div style={styles.assistantColumn}>
                           <div style={styles.assistantBubble}>
                             {isStreamingThis ? (
-                              <span key={streamingMsgIndex} className="streaming-text" style={styles.generatingText}>{streamingMessages[streamingMsgIndex]}</span>
+                              <span style={styles.generatingText}>
+                                . {streamingMessages[streamingMsgIndex]}
+                              </span>
                             ) : (
                               <div className="content-fade-in">
                                 {parsed ? (
