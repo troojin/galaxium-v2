@@ -706,7 +706,11 @@ export default function DashboardPage() {
         <div style={{ position: "relative", minHeight: loading ? 240 : undefined }}>
           {loading ? (
             <LoadingScreen fullScreen={false} message="Loading projects…" />
-          ) : !error && filtered.length === 0 && projects.length > 0 ? (
+          ) : !error && projects.length === 0 ? (
+            <div className="glass-sheen" style={styles.emptyState}>
+              <p style={styles.emptyText}>No projects found</p>
+            </div>
+          ) : !error && filtered.length === 0 ? (
             <div className="glass-sheen" style={styles.emptyState}>
               <p style={styles.emptyText}>No projects match &quot;{query}&quot;</p>
             </div>
