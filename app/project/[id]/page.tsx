@@ -868,6 +868,10 @@ export default function ProjectChatPage() {
           0%   { background-position: 0% 50%; }
           100% { background-position: 300% 50%; }
         }
+        @keyframes generatingDotPulse {
+          0%, 100% { box-shadow: 0 0 6px 2px rgba(167,139,250,0.6); }
+          50%      { box-shadow: 0 0 10px 4px rgba(167,139,250,0.85); }
+        }
         @keyframes presencePulse {
           0%, 100% { box-shadow: 0 0 6px 2px rgba(74,222,128,0.6); }
           50%      { box-shadow: 0 0 10px 4px rgba(74,222,128,0.85); }
@@ -993,8 +997,11 @@ export default function ProjectChatPage() {
                         <div style={styles.assistantColumn}>
                           <div style={styles.assistantBubble}>
                             {isStreamingThis ? (
-                              <span style={styles.generatingText}>
-                                . {streamingMessages[streamingMsgIndex]}
+                              <span style={styles.generatingRow}>
+                                <span style={styles.generatingDot} />
+                                <span style={styles.generatingText}>
+                                  {streamingMessages[streamingMsgIndex]}
+                                </span>
                               </span>
                             ) : (
                               <div className="content-fade-in">
@@ -1266,7 +1273,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#ffffff",
     fontSize: 14,
     lineHeight: 1.6,
-    boxShadow: "0 4px 16px rgba(91,33,182,0.3)",
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
   },
@@ -1278,6 +1284,20 @@ const styles: { [key: string]: React.CSSProperties } = {
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
     padding: "2px 0",
+  },
+  generatingRow: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  generatingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    flexShrink: 0,
+    background: "#a78bfa",
+    boxShadow: "0 0 6px 2px rgba(167,139,250,0.6)",
+    animation: "generatingDotPulse 2s ease-in-out infinite",
   },
   generatingText: {
     color: "#9a9aa5",
