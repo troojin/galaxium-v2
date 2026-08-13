@@ -969,8 +969,8 @@ export default function ProjectChatPage() {
           100% { background-position: 300% 50%; }
         }
         @keyframes generatingDotPulse {
-          0%, 100% { box-shadow: 0 0 6px 2px rgba(167,139,250,0.6); transform: scale(1); }
-          50%      { box-shadow: 0 0 10px 4px rgba(167,139,250,0.85); transform: scale(1.15); }
+          0%, 100% { transform: scale(1); }
+          50%      { transform: scale(1.15); }
         }
         @keyframes presencePulse {
           0%, 100% { box-shadow: 0 0 6px 2px rgba(74,222,128,0.6); }
@@ -1413,7 +1413,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: "50%",
     flexShrink: 0,
     background: "#a78bfa",
-    boxShadow: "0 0 6px 2px rgba(167,139,250,0.6)",
     animation: "generatingDotPulse 1.4s ease-in-out infinite",
   },
   generatingText: {
