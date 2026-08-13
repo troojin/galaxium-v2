@@ -965,7 +965,7 @@ export default function ProjectChatPage() {
               <div style={styles.centerInChat}>
                 <p style={styles.emptyTitle}>Start a conversation</p>
                 <p style={styles.emptySubtitle}>
-                  Ask anything about <strong style={{ color: "#e4e4e8" }}>{project?.name}</strong>
+                  Say stuff like &quot;Good morning&quot; to get started
                 </p>
               </div>
             ) : (
@@ -1064,7 +1064,7 @@ export default function ProjectChatPage() {
               <textarea
                 ref={textareaRef}
                 rows={1}
-                placeholder="Message the AI…"
+                placeholder="Message Galaxium"
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
