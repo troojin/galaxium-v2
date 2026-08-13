@@ -403,7 +403,9 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
         </div>
       ) : null}
 
-      {response.followUp ? <p style={styles.followUpText}>{response.followUp}</p> : null}
+      {response.followUp ? (
+        <p className="followup-gradient" style={styles.followUpText}>{response.followUp}</p>
+      ) : null}
 
       {activeScript ? (
         <ScriptPreviewModal node={activeScript} onClose={() => setActiveScript(null)} />
@@ -854,6 +856,18 @@ export default function ProjectChatPage() {
           from { opacity: 0; transform: scale(0.94) translateY(6px); }
           to   { opacity: 1; transform: scale(1) translateY(0); }
         }
+        .followup-gradient {
+          background: linear-gradient(90deg, #6d28d9, #a78bfa, #7c3aed, #4c1d95, #6d28d9);
+          background-size: 300% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          animation: followupShimmer 4s linear infinite;
+        }
+        @keyframes followupShimmer {
+          0%   { background-position: 0% 50%; }
+          100% { background-position: 300% 50%; }
+        }
         @keyframes presencePulse {
           0%, 100% { box-shadow: 0 0 6px 2px rgba(74,222,128,0.6); }
           50%      { box-shadow: 0 0 10px 4px rgba(74,222,128,0.85); }
@@ -1283,8 +1297,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   followUpText: {
     margin: 0,
-    color: "#a78bfa",
     fontSize: 13.5,
+    fontWeight: 600,
     fontStyle: "italic",
   },
   createdSection: {
