@@ -92,6 +92,30 @@ function flattenInstances(
   return out;
 }
 
+// A small pool of varied greetings, mixed by time of day plus a few
+// universal ones so the empty-chat state feels alive instead of static.
+function buildGreeting(name: string): string {
+  const hour = new Date().getHours();
+
+  const timePool =
+    hour < 5
+      ? [`Up late, ${name}?`, `Burning the midnight oil, ${name}?`, `Good evening, ${name}`]
+      : hour < 12
+      ? [`Good morning, ${name}`, `Rise and shine, ${name}`, `Need a coffee, ${name}?`]
+      : hour < 18
+      ? [`Good afternoon, ${name}`, `Hey ${name}, ready to build?`, `Welcome back, ${name}`]
+      : [`Good evening, ${name}`, `Burning the midnight oil, ${name}?`, `Welcome back, ${name}`];
+
+  const universalPool = [
+    `Let's build something, ${name}`,
+    `What are we making today, ${name}?`,
+    `Hey ${name}, what's the plan?`,
+  ];
+
+  const pool = [...timePool, ...universalPool];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 function ThumbUpIcon({ filled }: { filled?: boolean }) {
   return (
     <svg
@@ -260,8 +284,8 @@ function MessageFeedbackBar({
       </div>
 
       {dislikeOpen ? (
-        <div style={styles.modalOverlay} onClick={() => setDislikeOpen(false)}>
-          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalOverlay} className="modal-overlay-in" onClick={() => setDislikeOpen(false)}>
+          <div style={styles.modalCard} className="modal-card-in" onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <span style={styles.modalTitle}>What went wrong?</span>
               <button
@@ -384,8 +408,12 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
                   onClick={() => {
                     if (hasSource) setActiveScript(node);
                   }}
-                  className="created-item-script"
-                  style={{ ...styles.createdItem, ...styles.createdItemScript }}
+                  className="created-item-script created-item-in"
+                  style={{
+                    ...styles.createdItem,
+                    ...styles.createdItemScript,
+                    animationDelay: `${Math.min(i * 45, 360)}ms`,
+                  }}
                 >
                   <StudioIcon className={node.className} size={16} />
                   <span className="created-item-name" style={styles.createdItemName}>{node.name}</span>
@@ -423,6 +451,8 @@ export default function ProjectChatPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [pluginConnected, setPluginConnected] = useState(false);
+
+  const [displayName, setDisplayName] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -465,6 +495,29 @@ export default function ProjectChatPage() {
     loadProject();
     return () => { isMounted = false; };
   }, [params.id, supabase, router, toast]);
+
+  // Grab the signed-in user's display name once, for the empty-chat greeting.
+  useEffect(() => {
+    let isMounted = true;
+    async function loadUser() {
+      const { data } = await supabase.auth.getUser();
+      if (!isMounted) return;
+      const user = data.user;
+      const name =
+        (user?.user_metadata?.full_name as string | undefined) ||
+        (user?.user_metadata?.name as string | undefined) ||
+        (user?.user_metadata?.username as string | undefined) ||
+        user?.email?.split("@")[0] ||
+        "there";
+      setDisplayName(name);
+    }
+    loadUser();
+    return () => { isMounted = false; };
+  }, [supabase]);
+
+  // Picked once per mount (after we know the name) so it stays stable for
+  // the duration of the visit instead of re-rolling on every render.
+  const greeting = useMemo(() => buildGreeting(displayName ?? "there"), [displayName]);
 
   useEffect(() => {
     if (!project) return;
@@ -812,12 +865,25 @@ export default function ProjectChatPage() {
         * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
         textarea::placeholder { color: #6b6b74; }
         textarea:focus { outline: none; }
+
+        .back-link { transition: color 0.2s ease, border-color 0.2s ease, transform 0.15s ease; }
         .back-link:hover { color: #c4b5fd !important; border-color: rgba(139,92,246,0.35) !important; }
-        .send-btn:hover:not(:disabled) { filter: brightness(1.15); }
+        .back-link:active { transform: scale(0.92); }
+
+        .send-btn { transition: filter 0.2s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
+        .send-btn:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+        .send-btn:active:not(:disabled) { transform: translateY(0) scale(0.96); }
         .send-btn:disabled { opacity: 0.45; cursor: default; }
+
+        .stop-btn { transition: border-color 0.2s ease, color 0.2s ease, transform 0.15s ease; }
         .stop-btn:hover { border-color: rgba(248,113,113,0.5) !important; color: #fca5a5 !important; }
-        .feedback-btn:hover:not(:disabled) { color: #c4b5fd !important; background: rgba(139,92,246,0.1) !important; }
+        .stop-btn:active { transform: scale(0.96); }
+
+        .feedback-btn { transition: color 0.2s ease, background-color 0.2s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
+        .feedback-btn:hover:not(:disabled) { color: #c4b5fd !important; background: rgba(139,92,246,0.1) !important; transform: translateY(-1px); }
+        .feedback-btn:active:not(:disabled) { transform: translateY(0) scale(0.9); }
         .feedback-btn:disabled { opacity: 0.4; cursor: default; }
+
         .glass-sheen { position: relative; }
         .glass-sheen::before {
           content: '';
@@ -836,26 +902,60 @@ export default function ProjectChatPage() {
           box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.25), inset 0 -0.5px 0 rgba(255,255,255,0.03);
           pointer-events: none;
         }
-        .msg-assistant { animation: msgIn 0.18s ease; }
+
+        .msg-assistant { animation: msgIn 0.32s cubic-bezier(0.16, 1, 0.3, 1); }
+        .msg-user { animation: msgUserIn 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes msgIn {
-          from { opacity: 0; transform: translateY(6px); }
+          from { opacity: 0; transform: translateY(10px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .content-fade-in { animation: contentFadeIn 0.4s ease; }
+        @keyframes msgUserIn {
+          from { opacity: 0; transform: translateY(8px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .content-fade-in { animation: contentFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes contentFadeIn {
           from { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .modal-overlay-in { animation: modalOverlayIn 0.18s ease; }
+
+        .page-fade-in { animation: pageFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes pageFadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+
+        .topbar-fade-in { animation: topbarFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes topbarFadeIn {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-fade-in { animation: inputFadeIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: 0.1s; }
+        @keyframes inputFadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .greeting-fade-in { animation: greetingFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        @keyframes greetingFadeIn {
+          from { opacity: 0; transform: translateY(8px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .greeting-sub-in { animation: greetingFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: 0.08s; }
+
+        .modal-overlay-in { animation: modalOverlayIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes modalOverlayIn {
           from { opacity: 0; }
           to   { opacity: 1; }
         }
-        .modal-card-in { animation: modalCardIn 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+        .modal-card-in { animation: modalCardIn 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes modalCardIn {
           from { opacity: 0; transform: scale(0.94) translateY(6px); }
           to   { opacity: 1; transform: scale(1) translateY(0); }
         }
+
         .followup-gradient {
           background: linear-gradient(90deg, #6d28d9, #a78bfa, #7c3aed, #4c1d95, #6d28d9);
           background-size: 300% 100%;
@@ -869,23 +969,39 @@ export default function ProjectChatPage() {
           100% { background-position: 300% 50%; }
         }
         @keyframes generatingDotPulse {
-          0%, 100% { box-shadow: 0 0 6px 2px rgba(167,139,250,0.6); }
-          50%      { box-shadow: 0 0 10px 4px rgba(167,139,250,0.85); }
+          0%, 100% { box-shadow: 0 0 6px 2px rgba(167,139,250,0.6); transform: scale(1); }
+          50%      { box-shadow: 0 0 10px 4px rgba(167,139,250,0.85); transform: scale(1.15); }
         }
         @keyframes presencePulse {
           0%, 100% { box-shadow: 0 0 6px 2px rgba(74,222,128,0.6); }
           50%      { box-shadow: 0 0 10px 4px rgba(74,222,128,0.85); }
         }
+
+        .node-row { transition: background-color 0.2s ease; }
         .node-row:hover { background: rgba(255,255,255,0.03); }
+        .source-toggle { transition: color 0.2s ease, border-color 0.2s ease; }
         .source-toggle:hover { color: #c4b5fd !important; border-color: rgba(139,92,246,0.4) !important; }
+
+        .created-item-in {
+          animation: createdItemIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        @keyframes createdItemIn {
+          from { opacity: 0; transform: translateY(8px) scale(0.95); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
         .created-item-script {
           background: rgba(255,255,255,0.03) !important;
           border-color: rgba(255,255,255,0.09) !important;
-          transition: background-color 0.2s ease, border-color 0.2s ease;
+          transition: background-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .created-item-script:hover {
           background: rgba(139,92,246,0.08) !important;
           border-color: rgba(139,92,246,0.28) !important;
+          transform: translateY(-1px);
+        }
+        .created-item-script:active {
+          transform: translateY(0) scale(0.98);
         }
         .created-item-name { color: #a8a8b0; transition: color 0.2s ease; }
         .created-item-script:hover .created-item-name { color: #e4e4e8; }
@@ -906,19 +1022,21 @@ export default function ProjectChatPage() {
           white-space: nowrap;
           opacity: 0;
           pointer-events: none;
-          transition: opacity 0.15s ease, transform 0.15s ease;
+          transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
           z-index: 20;
         }
         .created-item-script:hover .created-item-tooltip {
           opacity: 1;
           transform: translateX(-50%) translateY(0);
         }
+
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; transition: background-color 0.2s ease; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
       `}</style>
 
-      <header style={styles.topbar}>
+      <header className="topbar-fade-in" style={styles.topbar}>
         <div style={styles.topbarSide} />
         <div style={styles.topbarCenter}>
           {project ? (
@@ -955,7 +1073,7 @@ export default function ProjectChatPage() {
           <p style={styles.mutedText}>Loading project…</p>
         </div>
       ) : (
-        <div style={styles.chatLayout}>
+        <div className="page-fade-in" style={styles.chatLayout}>
           <div style={styles.messagesList} ref={messagesListRef} onScroll={handleMessagesScroll}>
             {messagesLoading ? (
               <div style={styles.centerInChat}>
@@ -963,9 +1081,9 @@ export default function ProjectChatPage() {
               </div>
             ) : messages.length === 0 ? (
               <div style={styles.centerInChat}>
-                <p style={styles.emptyTitle}>Start a conversation</p>
-                <p style={styles.emptySubtitle}>
-                  Say stuff like &quot;Good morning&quot; to get started
+                <p className="greeting-fade-in" style={styles.emptyTitle}>{greeting}</p>
+                <p className="greeting-sub-in" style={styles.emptySubtitle}>
+                  Message Galaxium to get started
                 </p>
               </div>
             ) : (
@@ -988,7 +1106,7 @@ export default function ProjectChatPage() {
                   return (
                     <div
                       key={msg.id}
-                      className={msg.role === "assistant" ? "msg-assistant" : undefined}
+                      className={msg.role === "assistant" ? "msg-assistant" : "msg-user"}
                       style={msg.role === "user" ? styles.userRow : styles.assistantRow}
                     >
                       {msg.role === "user" ? (
@@ -1059,7 +1177,7 @@ export default function ProjectChatPage() {
             )}
           </div>
 
-          <div style={styles.inputArea}>
+          <div className="input-fade-in" style={styles.inputArea}>
             <div className="glass-sheen" style={styles.inputCard}>
               <textarea
                 ref={textareaRef}
@@ -1172,7 +1290,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#9a9aa5",
     cursor: "pointer",
     padding: 0,
-    transition: "color 0.15s ease, border-color 0.15s ease",
   },
   centerState: {
     flex: 1,
@@ -1297,7 +1414,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexShrink: 0,
     background: "#a78bfa",
     boxShadow: "0 0 6px 2px rgba(167,139,250,0.6)",
-    animation: "generatingDotPulse 2s ease-in-out infinite",
+    animation: "generatingDotPulse 1.4s ease-in-out infinite",
   },
   generatingText: {
     color: "#9a9aa5",
@@ -1435,7 +1552,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#7a7a85",
     cursor: "pointer",
     padding: 0,
-    transition: "color 0.15s ease, background-color 0.15s ease",
   },
   feedbackBtnLikeActive: {
     color: "#4ade80",
@@ -1575,6 +1691,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     WebkitBackdropFilter: "blur(24px) saturate(140%)",
     boxShadow: "0 8px 32px -8px rgba(0,0,0,0.7)",
     padding: "9px 9px 9px 12px",
+    transition: "border-color 0.2s ease, box-shadow 0.2s ease",
   },
   textarea: {
     flex: 1,
@@ -1601,7 +1718,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 600,
     cursor: "pointer",
     boxShadow: "0 2px 8px rgba(91,33,182,0.4), inset 0 0.5px 0 rgba(255,255,255,0.2)",
-    transition: "filter 0.15s ease",
   },
   stopBtn: {
     flexShrink: 0,
@@ -1613,6 +1729,5 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 12.5,
     fontWeight: 600,
     cursor: "pointer",
-    transition: "border-color 0.15s, color 0.15s",
   },
 };
