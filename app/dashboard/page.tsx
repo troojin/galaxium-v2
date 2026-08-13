@@ -9,8 +9,19 @@ import LoadingScreen from "@/components/loading";
 interface Project {
   id: string;
   name: string;
+  created_at: string;
   updated_at: string;
 }
+
+type SortOption = "updated" | "name_asc" | "name_desc" | "created_desc" | "created_asc";
+
+const SORT_LABELS: Record<SortOption, string> = {
+  updated: "Last updated",
+  name_asc: "Name (A–Z)",
+  name_desc: "Name (Z–A)",
+  created_desc: "Newest created",
+  created_asc: "Oldest created",
+};
 
 function timeAgo(dateString: string): string {
   const date = new Date(dateString);
@@ -29,6 +40,74 @@ function timeAgo(dateString: string): string {
   return `${years}y ago`;
 }
 
+function GridIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <rect x="1" y="1" width="6" height="6" rx="1.2" />
+      <rect x="9" y="1" width="6" height="6" rx="1.2" />
+      <rect x="1" y="9" width="6" height="6" rx="1.2" />
+      <rect x="9" y="9" width="6" height="6" rx="1.2" />
+    </svg>
+  );
+}
+
+function ListViewIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <circle cx="2" cy="4" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="2" cy="8" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="2" cy="12" r="0.9" fill="currentColor" stroke="none" />
+      <line x1="5.5" y1="4" x2="15" y2="4" />
+      <line x1="5.5" y1="8" x2="15" y2="8" />
+      <line x1="5.5" y1="12" x2="15" y2="12" />
+    </svg>
+  );
+}
+
+function MoreIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+      <circle cx="8" cy="3" r="1.4" />
+      <circle cx="8" cy="8" r="1.4" />
+      <circle cx="8" cy="13" r="1.4" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+      <path d="M18 6 6 18" />
+      <path d="M6 6l12 12" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+function SelectCircle({ checked }: { checked: boolean }) {
+  return (
+    <span
+      style={{
+        ...styles.selectCircle,
+        ...(checked ? styles.selectCircleChecked : {}),
+      }}
+    >
+      {checked ? (
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+      ) : null}
+    </span>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -42,23 +121,29 @@ export default function DashboardPage() {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
 
+  const [sortOption, setSortOption] = useState<SortOption>("updated");
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+
   const [showModal, setShowModal] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  // Card menu (3-dot) state
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  // Selection mode — replaces the old per-card 3-dot menu with a single
+  // global toggle. While active, clicking a card/row selects it instead
+  // of navigating, and a bar exposes bulk rename/delete.
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Rename modal state
+  // Rename modal state (rename only ever targets a single project)
   const [renameTarget, setRenameTarget] = useState<Project | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
 
-  // Delete confirm modal state
-  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  // Delete confirm modal state (supports one or many projects)
+  const [deleteTargets, setDeleteTargets] = useState<Project[] | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -97,7 +182,7 @@ export default function DashboardPage() {
 
       const { data, error } = await supabase
         .from("projects")
-        .select("id, name, updated_at")
+        .select("id, name, created_at, updated_at")
         .order("updated_at", { ascending: false });
 
       if (!isMounted) return;
@@ -118,17 +203,17 @@ export default function DashboardPage() {
     };
   }, [checkingAuth, supabase]);
 
-  // Close the 3-dot menu on outside click / Escape
+  // Close the sort menu on outside click / Escape
   useEffect(() => {
-    if (!openMenuId) return;
+    if (!sortMenuOpen) return;
 
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpenMenuId(null);
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+        setSortMenuOpen(false);
       }
     }
     function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpenMenuId(null);
+      if (e.key === "Escape") setSortMenuOpen(false);
     }
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -137,10 +222,31 @@ export default function DashboardPage() {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [openMenuId]);
+  }, [sortMenuOpen]);
 
-  const filtered = projects.filter((p) =>
-    p.name.toLowerCase().includes(query.trim().toLowerCase())
+  function sortProjects(list: Project[]): Project[] {
+    const arr = [...list];
+    switch (sortOption) {
+      case "name_asc":
+        arr.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "name_desc":
+        arr.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case "created_desc":
+        arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case "created_asc":
+        arr.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+      default:
+        arr.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    }
+    return arr;
+  }
+
+  const filtered = sortProjects(
+    projects.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()))
   );
 
   function openModal() {
@@ -186,7 +292,7 @@ export default function DashboardPage() {
     const { data, error } = await supabase
       .from("projects")
       .insert({ name: trimmed, user_id: user.id })
-      .select("id, name, updated_at")
+      .select("id, name, created_at, updated_at")
       .single();
 
     setCreating(false);
@@ -206,14 +312,39 @@ export default function DashboardPage() {
     toast.success(`"${trimmed}" created`);
   }
 
-  function handleCardMenuToggle(e: React.MouseEvent, projectId: string) {
-    e.stopPropagation();
-    setOpenMenuId((prev) => (prev === projectId ? null : projectId));
+  function toggleSelectionMode() {
+    setSelectionMode((prev) => {
+      const next = !prev;
+      if (!next) setSelectedIds(new Set());
+      return next;
+    });
   }
 
-  function openRenameModal(e: React.MouseEvent, project: Project) {
-    e.stopPropagation();
-    setOpenMenuId(null);
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function handleProjectClick(project: Project) {
+    if (selectionMode) {
+      toggleSelect(project.id);
+    } else {
+      router.push(`/project/${project.id}`);
+    }
+  }
+
+  function openRenameForSelection() {
+    if (selectedIds.size !== 1) return;
+    const id = Array.from(selectedIds)[0];
+    const project = projects.find((p) => p.id === id);
+    if (!project) return;
     setRenameTarget(project);
     setRenameValue(project.name);
     setRenameError(null);
@@ -254,7 +385,7 @@ export default function DashboardPage() {
       .from("projects")
       .update({ name: trimmed })
       .eq("id", renameTarget.id)
-      .select("id, name, updated_at")
+      .select("id, name, created_at, updated_at")
       .single();
 
     setRenaming(false);
@@ -273,43 +404,48 @@ export default function DashboardPage() {
       prev.map((p) => (p.id === renameTarget.id ? (data as Project) : p))
     );
     setRenameTarget(null);
+    setSelectedIds(new Set());
+    setSelectionMode(false);
     toast.success(`Renamed to "${trimmed}"`);
   }
 
-  function openDeleteModal(e: React.MouseEvent, project: Project) {
-    e.stopPropagation();
-    setOpenMenuId(null);
-    setDeleteTarget(project);
+  function openDeleteForSelection() {
+    const targets = projects.filter((p) => selectedIds.has(p.id));
+    if (targets.length === 0) return;
+    setDeleteTargets(targets);
     setDeleteError(null);
   }
 
   function closeDeleteModal() {
     if (deleting) return;
-    setDeleteTarget(null);
+    setDeleteTargets(null);
   }
 
   async function handleDelete() {
-    if (!deleteTarget) return;
+    if (!deleteTargets || deleteTargets.length === 0) return;
 
     setDeleting(true);
     setDeleteError(null);
 
-    const { error } = await supabase
-      .from("projects")
-      .delete()
-      .eq("id", deleteTarget.id);
+    const ids = deleteTargets.map((p) => p.id);
+    const { error } = await supabase.from("projects").delete().in("id", ids);
 
     setDeleting(false);
 
     if (error) {
       setDeleteError(error.message);
-      toast.error("Couldn't delete the project.");
+      toast.error(`Couldn't delete the project${ids.length > 1 ? "s" : ""}.`);
       return;
     }
 
-    setProjects((prev) => prev.filter((p) => p.id !== deleteTarget.id));
-    setDeleteTarget(null);
-    toast.success(`"${deleteTarget.name}" deleted`);
+    const label =
+      deleteTargets.length === 1 ? `"${deleteTargets[0].name}"` : `${deleteTargets.length} projects`;
+
+    setProjects((prev) => prev.filter((p) => !ids.includes(p.id)));
+    setDeleteTargets(null);
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+    toast.success(`${label} deleted`);
   }
 
   if (checkingAuth) {
@@ -343,31 +479,37 @@ export default function DashboardPage() {
           pointer-events: none;
         }
         .project-card {
-          transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+          transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
           cursor: pointer;
         }
         .project-card:hover {
           transform: translateY(-2px);
           border-color: rgba(139,92,246,0.35) !important;
-          box-shadow: 0 12px 32px -8px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,92,246,0.15) !important;
-        }
-        .new-project-card {
-          transition: border-color 0.18s ease, background 0.18s ease;
-          cursor: pointer;
-        }
-        .new-project-card:hover {
-          border-color: rgba(139,92,246,0.4) !important;
-          background: rgba(139,92,246,0.04) !important;
         }
         .view-toggle-btn {
           transition: background 0.15s ease, color 0.15s ease;
         }
-        .card-menu-btn {
-          transition: background 0.15s ease, color 0.15s ease;
+        .select-toggle-btn {
+          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
         }
-        .card-menu-btn:hover {
-          background: rgba(255,255,255,0.08) !important;
-          color: #ffffff !important;
+        .select-toggle-btn:hover {
+          border-color: rgba(139,92,246,0.35) !important;
+          color: #c4b5fd !important;
+        }
+        .sort-btn:hover {
+          border-color: rgba(139,92,246,0.35) !important;
+        }
+        .selection-action-btn:hover:not(:disabled) {
+          border-color: rgba(139,92,246,0.4) !important;
+          color: #c4b5fd !important;
+        }
+        .selection-delete-btn:hover:not(:disabled) {
+          border-color: rgba(248,113,113,0.5) !important;
+          background: rgba(248,113,113,0.08) !important;
+        }
+        .selection-action-btn:disabled, .selection-delete-btn:disabled {
+          opacity: 0.4;
+          cursor: default;
         }
         .card-menu-item {
           transition: background 0.12s ease;
@@ -375,8 +517,9 @@ export default function DashboardPage() {
         .card-menu-item:hover {
           background: rgba(255,255,255,0.06);
         }
-        .card-menu-item.danger:hover {
-          background: rgba(248,113,113,0.1);
+        .card-menu-item.active {
+          color: #c4b5fd;
+          background: rgba(139,92,246,0.1);
         }
         .modal-overlay {
           animation: fadeIn 0.15s ease;
@@ -446,6 +589,37 @@ export default function DashboardPage() {
             onChange={(e) => setQuery(e.target.value)}
             style={styles.searchInput}
           />
+
+          <div style={styles.sortWrap} ref={sortMenuRef}>
+            <button
+              type="button"
+              className="sort-btn"
+              style={styles.sortBtn}
+              onClick={() => setSortMenuOpen((prev) => !prev)}
+            >
+              <span>Sort: {SORT_LABELS[sortOption]}</span>
+              <ChevronDownIcon />
+            </button>
+            {sortMenuOpen && (
+              <div className="card-dropdown" style={styles.sortDropdown}>
+                {(Object.keys(SORT_LABELS) as SortOption[]).map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    className={`card-menu-item${sortOption === opt ? " active" : ""}`}
+                    style={styles.sortMenuItem}
+                    onClick={() => {
+                      setSortOption(opt);
+                      setSortMenuOpen(false);
+                    }}
+                  >
+                    {SORT_LABELS[opt]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div style={styles.viewToggle}>
             <button
               className="view-toggle-btn"
@@ -456,7 +630,7 @@ export default function DashboardPage() {
               onClick={() => setView("grid")}
               aria-label="Grid view"
             >
-              ▦
+              <GridIcon />
             </button>
             <button
               className="view-toggle-btn"
@@ -467,10 +641,59 @@ export default function DashboardPage() {
               onClick={() => setView("list")}
               aria-label="List view"
             >
-              ☰
+              <ListViewIcon />
             </button>
           </div>
+
+          <button
+            type="button"
+            className="select-toggle-btn"
+            style={{
+              ...styles.selectToggleBtn,
+              ...(selectionMode ? styles.selectToggleBtnActive : {}),
+            }}
+            onClick={toggleSelectionMode}
+            aria-label={selectionMode ? "Exit selection" : "Select projects"}
+            title={selectionMode ? "Exit selection" : "Select projects"}
+          >
+            {selectionMode ? <CloseIcon /> : <MoreIcon />}
+          </button>
         </div>
+
+        {selectionMode && (
+          <div style={styles.selectionBar}>
+            <span style={styles.selectionCount}>
+              {selectedIds.size} selected
+            </span>
+            <div style={styles.selectionActions}>
+              <button
+                type="button"
+                className="selection-action-btn"
+                style={styles.selectionActionBtn}
+                onClick={openRenameForSelection}
+                disabled={selectedIds.size !== 1}
+              >
+                Rename
+              </button>
+              <button
+                type="button"
+                className="selection-delete-btn"
+                style={styles.selectionDeleteBtn}
+                onClick={openDeleteForSelection}
+                disabled={selectedIds.size === 0}
+              >
+                Delete
+              </button>
+              <button
+                type="button"
+                style={styles.selectionCancelBtn}
+                onClick={toggleSelectionMode}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="glass-sheen" style={{ ...styles.emptyState, marginBottom: 20 }}>
@@ -489,124 +712,55 @@ export default function DashboardPage() {
             </div>
           ) : view === "grid" ? (
             <div style={styles.grid}>
-              {filtered.map((project) => (
-                <div
-                  key={project.id}
-                  className="glass-sheen project-card"
-                  style={{
-                    ...styles.card,
-                    zIndex: openMenuId === project.id ? 20 : 1,
-                  }}
-                  onClick={() => router.push(`/project/${project.id}`)}
-                >
-                  <div style={styles.cardBody}>
-                    <div style={styles.cardTopRow}>
-                      <h3 style={styles.cardName}>{project.name}</h3>
-                      <div style={styles.menuWrap} ref={openMenuId === project.id ? menuRef : null}>
-                        <button
-                          className="card-menu-btn"
-                          style={styles.cardMenuBtn}
-                          onClick={(e) => handleCardMenuToggle(e, project.id)}
-                          aria-label="Project options"
-                        >
-                          ⋯
-                        </button>
-                        {openMenuId === project.id && (
-                          <div
-                            className="card-dropdown"
-                            style={styles.cardDropdown}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              className="card-menu-item"
-                              style={styles.cardMenuItem}
-                              onClick={(e) => openRenameModal(e, project)}
-                            >
-                              Rename
-                            </button>
-                            <button
-                              className="card-menu-item danger"
-                              style={{ ...styles.cardMenuItem, color: "#f87171" }}
-                              onClick={(e) => openDeleteModal(e, project)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
+              {filtered.map((project) => {
+                const selected = selectedIds.has(project.id);
+                return (
+                  <div
+                    key={project.id}
+                    className="glass-sheen project-card"
+                    style={{
+                      ...styles.card,
+                      ...(selected ? styles.cardSelected : {}),
+                    }}
+                    onClick={() => handleProjectClick(project)}
+                  >
+                    <div style={styles.cardBody}>
+                      <div style={styles.cardTopRow}>
+                        {selectionMode ? <SelectCircle checked={selected} /> : null}
+                        <h3 style={styles.cardName}>{project.name}</h3>
                       </div>
+                      <p style={styles.cardUpdated}>Updated {timeAgo(project.updated_at)}</p>
                     </div>
-                    <p style={styles.cardUpdated}>Updated {timeAgo(project.updated_at)}</p>
                   </div>
-                </div>
-              ))}
-              <div className="new-project-card" style={styles.newProjectCard} onClick={openModal}>
-                <span style={styles.newProjectPlus}>+</span>
-                <span style={styles.newProjectLabel}>New project</span>
-              </div>
+                );
+              })}
             </div>
           ) : (
             <div className="glass-sheen" style={styles.listWrap}>
-              {filtered.map((project, i) => (
-                <div
-                  key={project.id}
-                  className="project-card"
-                  style={{
-                    ...styles.listRow,
-                    borderBottom:
-                      i === filtered.length - 1 ? "none" : "1px solid rgba(255,255,255,0.06)",
-                    position: "relative",
-                    zIndex: openMenuId === project.id ? 20 : 1,
-                  }}
-                  onClick={() => router.push(`/project/${project.id}`)}
-                >
-                  <div style={styles.listLeft}>
-                    <p style={styles.listName}>{project.name}</p>
-                  </div>
-                  <div style={styles.listRight}>
-                    <span style={styles.listUpdated}>{timeAgo(project.updated_at)}</span>
-                    <div style={styles.menuWrap} ref={openMenuId === project.id ? menuRef : null}>
-                      <button
-                        className="card-menu-btn"
-                        style={styles.cardMenuBtn}
-                        onClick={(e) => handleCardMenuToggle(e, project.id)}
-                        aria-label="Project options"
-                      >
-                        ⋯
-                      </button>
-                      {openMenuId === project.id && (
-                        <div
-                          className="card-dropdown"
-                          style={{ ...styles.cardDropdown, right: 0, left: "auto" }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            className="card-menu-item"
-                            style={styles.cardMenuItem}
-                            onClick={(e) => openRenameModal(e, project)}
-                          >
-                            Rename
-                          </button>
-                          <button
-                            className="card-menu-item danger"
-                            style={{ ...styles.cardMenuItem, color: "#f87171" }}
-                            onClick={(e) => openDeleteModal(e, project)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
+              {filtered.map((project, i) => {
+                const selected = selectedIds.has(project.id);
+                return (
+                  <div
+                    key={project.id}
+                    className="project-card"
+                    style={{
+                      ...styles.listRow,
+                      ...(selected ? styles.listRowSelected : {}),
+                      borderBottom:
+                        i === filtered.length - 1 ? "none" : "1px solid rgba(255,255,255,0.06)",
+                    }}
+                    onClick={() => handleProjectClick(project)}
+                  >
+                    <div style={styles.listLeft}>
+                      {selectionMode ? <SelectCircle checked={selected} /> : null}
+                      <p style={styles.listName}>{project.name}</p>
+                    </div>
+                    <div style={styles.listRight}>
+                      <span style={styles.listUpdated}>{timeAgo(project.updated_at)}</span>
                     </div>
                   </div>
-                </div>
-              ))}
-              <div
-                className="new-project-card"
-                style={{ ...styles.newProjectCard, borderRadius: 0, borderTop: "1px solid rgba(255,255,255,0.06)", border: "none", borderTopWidth: 1 }}
-                onClick={openModal}
-              >
-                <span style={styles.newProjectPlus}>+</span>
-                <span style={styles.newProjectLabel}>New project</span>
-              </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -702,17 +856,30 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {deleteTarget && (
+      {deleteTargets && (
         <div className="modal-overlay" style={styles.modalOverlay} onClick={closeDeleteModal}>
           <div
             className="glass-sheen modal-card"
             style={styles.modalCard}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={styles.modalTitle}>Delete project</h2>
+            <h2 style={styles.modalTitle}>
+              Delete project{deleteTargets.length > 1 ? "s" : ""}
+            </h2>
             <p style={styles.modalSubtitle}>
-              Are you sure you want to delete &quot;{deleteTarget.name}&quot;? This can&apos;t be undone.
+              {deleteTargets.length === 1
+                ? `Are you sure you want to delete "${deleteTargets[0].name}"? This can't be undone.`
+                : `Are you sure you want to delete these ${deleteTargets.length} projects? This can't be undone.`}
             </p>
+            {deleteTargets.length > 1 && (
+              <ul style={styles.deleteList}>
+                {deleteTargets.map((p) => (
+                  <li key={p.id} style={styles.deleteListItem}>
+                    {p.name}
+                  </li>
+                ))}
+              </ul>
+            )}
             {deleteError && <p style={styles.modalError}>{deleteError}</p>}
             <div style={styles.modalActions}>
               <button
@@ -729,7 +896,7 @@ export default function DashboardPage() {
                 style={styles.modalDeleteBtn}
                 disabled={deleting}
               >
-                {deleting ? "Deleting…" : "Delete project"}
+                {deleting ? "Deleting…" : `Delete project${deleteTargets.length > 1 ? "s" : ""}`}
               </button>
             </div>
           </div>
@@ -820,8 +987,9 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   controlsRow: {
     display: "flex",
-    gap: 12,
-    marginBottom: 28,
+    gap: 10,
+    marginBottom: 20,
+    flexWrap: "wrap",
   },
   searchInput: {
     background: "rgba(0,0,0,0.35)",
@@ -831,9 +999,54 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#ffffff",
     fontSize: 14,
     flex: 1,
+    minWidth: 160,
     backdropFilter: "blur(12px)",
     WebkitBackdropFilter: "blur(12px)",
     transition: "border-color 0.2s, box-shadow 0.2s",
+  },
+  sortWrap: {
+    position: "relative",
+  },
+  sortBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    height: "100%",
+    background: "rgba(0,0,0,0.35)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 10,
+    padding: "10px 14px",
+    color: "#e5e5ea",
+    fontSize: 13.5,
+    fontWeight: 500,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    transition: "border-color 0.15s ease",
+  },
+  sortDropdown: {
+    position: "absolute",
+    top: "calc(100% + 6px)",
+    left: 0,
+    minWidth: 190,
+    background: "linear-gradient(160deg, rgba(20,20,22,0.98) 0%, rgba(8,8,10,0.98) 100%)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 10,
+    padding: 5,
+    zIndex: 50,
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+  },
+  sortMenuItem: {
+    background: "transparent",
+    border: "none",
+    color: "#e5e5ea",
+    borderRadius: 7,
+    padding: "8px 10px",
+    fontSize: 13.5,
+    fontWeight: 500,
+    textAlign: "left",
+    cursor: "pointer",
   },
   viewToggle: {
     display: "flex",
@@ -844,17 +1057,89 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 2,
   },
   viewToggleBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     background: "transparent",
     border: "none",
     color: "#9a9aa5",
     borderRadius: 7,
     padding: "8px 12px",
-    fontSize: 14,
     cursor: "pointer",
   },
   viewToggleBtnActive: {
     background: "rgba(139,92,246,0.18)",
     color: "#c4b5fd",
+  },
+  selectToggleBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 38,
+    background: "rgba(0,0,0,0.35)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 10,
+    color: "#9a9aa5",
+    cursor: "pointer",
+  },
+  selectToggleBtnActive: {
+    background: "rgba(139,92,246,0.18)",
+    borderColor: "rgba(139,92,246,0.35)",
+    color: "#c4b5fd",
+  },
+  selectionBar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+    background: "rgba(139,92,246,0.08)",
+    border: "1px solid rgba(139,92,246,0.25)",
+    borderRadius: 12,
+    padding: "10px 16px",
+    marginBottom: 20,
+    flexWrap: "wrap",
+  },
+  selectionCount: {
+    color: "#c4b5fd",
+    fontSize: 13.5,
+    fontWeight: 600,
+  },
+  selectionActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  selectionActionBtn: {
+    background: "transparent",
+    border: "1px solid rgba(255,255,255,0.14)",
+    color: "#e5e5ea",
+    borderRadius: 8,
+    padding: "7px 14px",
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: "pointer",
+    transition: "border-color 0.15s ease, color 0.15s ease",
+  },
+  selectionDeleteBtn: {
+    background: "transparent",
+    border: "1px solid rgba(248,113,113,0.3)",
+    color: "#f87171",
+    borderRadius: 8,
+    padding: "7px 14px",
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: "pointer",
+    transition: "border-color 0.15s ease, background 0.15s ease",
+  },
+  selectionCancelBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#9a9aa5",
+    borderRadius: 8,
+    padding: "7px 10px",
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: "pointer",
   },
   grid: {
     display: "grid",
@@ -868,10 +1153,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: 16,
     backdropFilter: "blur(24px) saturate(140%)",
     WebkitBackdropFilter: "blur(24px) saturate(140%)",
-    boxShadow: "0 12px 32px -12px rgba(0,0,0,0.7)",
     overflow: "visible",
     display: "flex",
     flexDirection: "column",
+  },
+  cardSelected: {
+    borderColor: "rgba(139,92,246,0.5)",
+    background: "linear-gradient(160deg, rgba(139,92,246,0.08) 0%, rgba(0,0,0,0.65) 50%, rgba(6,6,8,0.7) 100%)",
   },
   cardBody: {
     padding: "18px 22px 22px",
@@ -881,9 +1169,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   cardTopRow: {
     display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 8,
+    alignItems: "center",
+    gap: 4,
   },
   cardName: {
     color: "#ffffff",
@@ -897,72 +1184,22 @@ const styles: { [key: string]: React.CSSProperties } = {
     margin: "auto 0 0",
     paddingTop: 10,
   },
-  menuWrap: {
-    position: "relative",
+  selectCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: "50%",
+    border: "1.5px solid rgba(255,255,255,0.25)",
+    background: "rgba(0,0,0,0.3)",
     flexShrink: 0,
-  },
-  cardMenuBtn: {
-    background: "transparent",
-    border: "none",
-    color: "#6b6b74",
-    borderRadius: 7,
-    width: 28,
-    height: 28,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 16,
-    lineHeight: 1,
-    cursor: "pointer",
+    marginRight: 8,
+    marginBottom: 8,
   },
-  cardDropdown: {
-    position: "absolute",
-    top: "calc(100% + 6px)",
-    right: 0,
-    left: "auto",
-    minWidth: 150,
-    background: "linear-gradient(160deg, rgba(20,20,22,0.98) 0%, rgba(8,8,10,0.98) 100%)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 10,
-    boxShadow: "0 16px 40px -8px rgba(0,0,0,0.85)",
-    padding: 5,
-    zIndex: 50,
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-  },
-  cardMenuItem: {
-    background: "transparent",
-    border: "none",
-    color: "#e5e5ea",
-    borderRadius: 7,
-    padding: "8px 10px",
-    fontSize: 13.5,
-    fontWeight: 500,
-    textAlign: "left",
-    cursor: "pointer",
-  },
-  newProjectCard: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    border: "1px dashed rgba(255,255,255,0.15)",
-    borderRadius: 16,
-    minHeight: 100,
-    background: "rgba(255,255,255,0.01)",
-  },
-  newProjectPlus: {
-    color: "#8b5cf6",
-    fontSize: 22,
-    fontWeight: 400,
-    lineHeight: 1,
-  },
-  newProjectLabel: {
-    color: "#9a9aa5",
-    fontSize: 13,
-    fontWeight: 500,
+  selectCircleChecked: {
+    background: "#8b5cf6",
+    borderColor: "#8b5cf6",
   },
   listWrap: {
     position: "relative",
@@ -971,7 +1208,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: 16,
     backdropFilter: "blur(24px) saturate(140%)",
     WebkitBackdropFilter: "blur(24px) saturate(140%)",
-    boxShadow: "0 12px 32px -12px rgba(0,0,0,0.7)",
     overflow: "visible",
   },
   listRow: {
@@ -982,16 +1218,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: 16,
     flexWrap: "wrap",
   },
+  listRowSelected: {
+    background: "rgba(139,92,246,0.08)",
+  },
   listLeft: {
     display: "flex",
     alignItems: "center",
-    gap: 12,
+    gap: 4,
   },
   listName: {
     color: "#ffffff",
     fontSize: 14,
     fontWeight: 600,
-    margin: "0 0 3px",
+    margin: 0,
   },
   listRight: {
     display: "flex",
@@ -1016,6 +1255,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#9a9aa5",
     fontSize: 14,
     margin: 0,
+  },
+  deleteList: {
+    margin: "0 0 16px",
+    padding: "0 0 0 18px",
+    maxHeight: 120,
+    overflowY: "auto",
+  },
+  deleteListItem: {
+    color: "#c8c8d0",
+    fontSize: 13,
+    lineHeight: 1.8,
   },
   modalOverlay: {
     position: "fixed",
