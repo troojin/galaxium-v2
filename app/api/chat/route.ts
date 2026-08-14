@@ -7,6 +7,46 @@ export const runtime = "edge";
 
 const MAX_HISTORY_MESSAGES = 30;
 
+const ALLOWED_ORIGINS = new Set([
+  "https://galaxium.lol",
+  "https://www.galaxium.lol",
+]);
+
+function isAllowedOrigin(req: NextRequest): boolean {
+  const origin = req.headers.get("origin");
+  if (origin) {
+    return ALLOWED_ORIGINS.has(origin);
+  }
+  
+  const referer = req.headers.get("referer");
+  if (referer) {
+    try {
+      const refOrigin = new URL(referer).origin;
+      return ALLOWED_ORIGINS.has(refOrigin);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+function corsHeaders(origin: string | null) {
+  return {
+    "Access-Control-Allow-Origin":
+      origin && ALLOWED_ORIGINS.has(origin) ? origin : "",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    Vary: "Origin",
+  };
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders(req.headers.get("origin")),
+  });
+}
+
 function cleanMessages(messages: ChatMessage[]): ChatMessage[] {
   return messages
     .filter(
@@ -22,7 +62,23 @@ function cleanMessages(messages: ChatMessage[]): ChatMessage[] {
 }
 
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get("origin");
+  const baseHeaders = corsHeaders(origin);
+
   try {
+    if (!isAllowedOrigin(req)) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden origin" }),
+        {
+          status: 403,
+          headers: {
+            "Content-Type": "application/json",
+            ...baseHeaders,
+          },
+        }
+      );
+    }
+
     const body = await req.json();
 
     const { messages, projectId } = body as {
@@ -39,6 +95,7 @@ export async function POST(req: NextRequest) {
           status: 400,
           headers: {
             "Content-Type": "application/json",
+            ...baseHeaders,
           },
         }
       );
@@ -61,6 +118,7 @@ export async function POST(req: NextRequest) {
           status: 401,
           headers: {
             "Content-Type": "application/json",
+            ...baseHeaders,
           },
         }
       );
@@ -85,6 +143,7 @@ export async function POST(req: NextRequest) {
           status: 404,
           headers: {
             "Content-Type": "application/json",
+            ...baseHeaders,
           },
         }
       );
@@ -102,6 +161,7 @@ export async function POST(req: NextRequest) {
           status: 400,
           headers: {
             "Content-Type": "application/json",
+            ...baseHeaders,
           },
         }
       );
@@ -126,6 +186,7 @@ export async function POST(req: NextRequest) {
           status: 500,
           headers: {
             "Content-Type": "application/json",
+            ...baseHeaders,
           },
         }
       );
@@ -158,6 +219,7 @@ export async function POST(req: NextRequest) {
           status: 400,
           headers: {
             "Content-Type": "application/json",
+            ...baseHeaders,
           },
         }
       );
@@ -175,6 +237,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache, no-transform",
         Connection: "keep-alive",
+        ...baseHeaders,
       },
     });
   } catch (err: unknown) {
@@ -192,6 +255,7 @@ export async function POST(req: NextRequest) {
         status: 500,
         headers: {
           "Content-Type": "application/json",
+          ...baseHeaders,
         },
       }
     );
