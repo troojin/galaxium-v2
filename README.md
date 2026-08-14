@@ -15,4 +15,4 @@ https://galaxium.lol
 
 ## License
 
-mit
+mit.edu
