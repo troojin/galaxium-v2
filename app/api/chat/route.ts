@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
+import { getRequestContext } from "@cloudflare/next-on-pages";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createChatCompletionStream, ChatMessage } from "@/lib/ai/client";
 import { createClient } from "@/lib/supabase/server";
-import { SYSTEM_PROMPT } from "@/lib/ai/rules";
+import { SYSTEM_PROMPT, parseGalaxiumResponse } from "@/lib/ai/rules";
 
 export const runtime = "edge";
 
@@ -17,7 +19,7 @@ function isAllowedOrigin(req: NextRequest): boolean {
   if (origin) {
     return ALLOWED_ORIGINS.has(origin);
   }
-  
+
   const referer = req.headers.get("referer");
   if (referer) {
     try {
@@ -59,6 +61,113 @@ function cleanMessages(messages: ChatMessage[]): ChatMessage[] {
       role: message.role,
       content: message.content.trim(),
     }));
+}
+
+async function consumeAndPersist({
+  stream,
+  supabaseAdmin,
+  projectId,
+  userMessageToPersist,
+}: {
+  stream: ReadableStream<Uint8Array>;
+  supabaseAdmin: ReturnType<typeof createServiceClient>;
+  projectId: string;
+  userMessageToPersist: ChatMessage | null;
+}) {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let fullContent = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+
+        const data = trimmed.slice("data:".length).trim();
+        if (data === "[DONE]" || data.length === 0) continue;
+
+        try {
+          const parsed = JSON.parse(data);
+          const delta = parsed?.choices?.[0]?.delta?.content;
+          if (typeof delta === "string") {
+            fullContent += delta;
+          }
+        } catch (err) {
+          console.error("Failed to parse Groq stream chunk:", err, data);
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error reading Groq stream for persistence:", err);
+    return;
+  }
+
+  if (userMessageToPersist) {
+    const { error: userInsertError } = await supabaseAdmin
+      .from("messages")
+      .insert({
+        project_id: projectId,
+        role: "user",
+        content: userMessageToPersist.content,
+      });
+
+    if (userInsertError) {
+      console.error("Failed to persist user message:", userInsertError);
+    }
+  }
+
+  if (!fullContent.trim()) {
+    console.error("Groq stream produced no content, skipping message/insert persistence");
+    return;
+  }
+
+  const { data: assistantMessage, error: assistantInsertError } = await supabaseAdmin
+    .from("messages")
+    .insert({
+      project_id: projectId,
+      role: "assistant",
+      content: fullContent,
+    })
+    .select("id")
+    .single();
+
+  if (assistantInsertError || !assistantMessage) {
+    console.error("Failed to persist assistant message:", assistantInsertError);
+    return;
+  }
+
+  const parsed = parseGalaxiumResponse(fullContent);
+
+  if (!parsed) {
+    console.error("Failed to parse Galaxium JSON from assistant output; skipping plugin_inserts");
+    return;
+  }
+
+  if (parsed.instances.length === 0) {
+    return;
+  }
+
+  const { error: pluginInsertError } = await supabaseAdmin
+    .from("plugin_inserts")
+    .insert({
+      project_id: projectId,
+      message_id: assistantMessage.id,
+      payload: { instances: parsed.instances },
+    });
+
+  if (pluginInsertError) {
+    console.error("Failed to write plugin_inserts row:", pluginInsertError);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -231,7 +340,24 @@ export async function POST(req: NextRequest) {
       max_tokens: 4096,
     });
 
-    return new Response(stream, {
+    const [clientStream, persistStream] = stream.tee();
+
+    const supabaseAdmin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const ctx = getRequestContext().ctx;
+    ctx.waitUntil(
+      consumeAndPersist({
+        stream: persistStream,
+        supabaseAdmin,
+        projectId,
+        userMessageToPersist: alreadyPersisted ? null : latestUserMessage,
+      })
+    );
+
+    return new Response(clientStream, {
       status: 200,
       headers: {
         "Content-Type": "text/event-stream",
