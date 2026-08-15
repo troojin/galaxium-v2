@@ -163,7 +163,7 @@ connectedLabel.BackgroundTransparency = 1.000
 connectedLabel.LayoutOrder = 1
 connectedLabel.Size = UDim2.new(1, 0, 0, 20)
 connectedLabel.Font = Enum.Font.GothamMedium
-connectedLabel.Text = "Connected to Galaxium ✓"
+connectedLabel.Text = "Connected to Galaxium \xE2\x9C\x93"
 connectedLabel.TextColor3 = Color3.fromRGB(120, 220, 150)
 connectedLabel.TextSize = 14.000
 
@@ -268,6 +268,151 @@ local function stopHeartbeat()
 	heartbeatRunning = false
 end
 
+-- ===== Instance builder (auto-insert) =====
+
+-- NOTE: this assumes each AI-generated node looks like:
+-- {
+--   className = "Part",
+--   name = "Baseplate",
+--   properties = { Anchored = true, Size = {12, 1, 12}, ... },
+--   source = "print('hi')",      -- only for Script/LocalScript/ModuleScript
+--   children = { <node>, ... },
+-- }
+-- and that the top-level payload looks like:
+-- { parent = "Workspace", instances = { <node>, <node>, ... } }
+--
+-- I haven't seen rules.ts (your AI's JSON schema), so this is a best guess
+-- at the shape and at how typed values like Vector3/Color3/UDim2/CFrame get
+-- encoded. Paste rules.ts or a sample AI output and I'll make this exact —
+-- right now, any property whose value isn't a plain string/number/boolean
+-- will likely fail silently (logged as a warning, not a crash).
+
+local function coercePropertyValue(key, value)
+	-- Plain types pass straight through.
+	if typeof(value) ~= "table" then
+		return value
+	end
+
+	-- Heuristic decoding for common typed properties, based on array length.
+	-- Adjust once we know the real schema.
+	local n = #value
+	if n == 3 then
+		-- Could be Vector3 or Color3 (0-255) - assume Vector3 for Size/Position-like keys.
+		if key == "Color" or key == "BrickColor" then
+			return Color3.fromRGB(value[1], value[2], value[3])
+		end
+		return Vector3.new(value[1], value[2], value[3])
+	elseif n == 4 then
+		-- UDim2-ish: {scaleX, offsetX, scaleY, offsetY}
+		return UDim2.new(value[1], value[2], value[3], value[4])
+	elseif n == 2 then
+		return UDim.new(value[1], value[2])
+	end
+
+	return value
+end
+
+local function applyProperty(instance, key, value)
+	local coerced = coercePropertyValue(key, value)
+	local ok, err = pcall(function()
+		instance[key] = coerced
+	end)
+	if not ok then
+		warn("failed to set property " .. tostring(key) .. " on " .. instance.ClassName .. ": " .. tostring(err))
+	end
+end
+
+local function buildInstance(node, parent)
+	local ok, inst = pcall(Instance.new, node.className)
+	if not ok then
+		warn("failed to create instance of class " .. tostring(node.className) .. ": " .. tostring(inst))
+		return nil
+	end
+
+	if node.name then
+		inst.Name = node.name
+	end
+
+	if node.properties then
+		for key, value in pairs(node.properties) do
+			applyProperty(inst, key, value)
+		end
+	end
+
+	if node.source and (inst:IsA("Script") or inst:IsA("LocalScript") or inst:IsA("ModuleScript")) then
+		inst.Source = node.source
+	end
+
+	inst.Parent = parent
+
+	if node.children then
+		for _, childNode in ipairs(node.children) do
+			buildInstance(childNode, inst)
+		end
+	end
+
+	return inst
+end
+
+local function resolveParent(name)
+	local map = {
+		Workspace = workspace,
+		ServerScriptService = game:GetService("ServerScriptService"),
+		ServerStorage = game:GetService("ServerStorage"),
+		ReplicatedStorage = game:GetService("ReplicatedStorage"),
+		StarterGui = game:GetService("StarterGui"),
+		StarterPlayer = game:GetService("StarterPlayer"),
+		Lighting = game:GetService("Lighting"),
+	}
+	return map[name] or workspace
+end
+
+local function applyInsert(payload)
+	local targetParent = resolveParent(payload.parent)
+	for _, node in ipairs(payload.instances or {}) do
+		buildInstance(node, targetParent)
+	end
+end
+
+-- ===== Insert polling (auto-insert) =====
+
+local insertPollRunning = false
+
+local function startInsertPolling()
+	if insertPollRunning then return end
+	insertPollRunning = true
+
+	task.spawn(function()
+		while insertPollRunning do
+			local apiKey = plugin:GetSetting(SETTING_KEY)
+			if apiKey and currentProjectId then
+				local data, err = request("POST", "/insert/pending", { projectId = currentProjectId }, apiKey)
+				if data and data.inserts then
+					for _, item in ipairs(data.inserts) do
+						local applyOk, applyErr = pcall(applyInsert, item.payload)
+						if applyOk then
+							log("applied insert " .. tostring(item.id))
+							local _, ackErr = request("POST", "/insert/ack", { insertId = item.id }, apiKey)
+							if ackErr then
+								warn("failed to ack insert " .. tostring(item.id) .. ": " .. tostring(ackErr))
+							end
+						else
+							warn("failed to apply insert " .. tostring(item.id) .. ": " .. tostring(applyErr))
+						end
+					end
+				elseif err then
+					warn("insert poll failed: " .. tostring(err))
+				end
+			end
+			task.wait(4)
+		end
+	end)
+end
+
+local function stopInsertPolling()
+	insertPollRunning = false
+end
+
 -- ===== Recent project auto-detect =====
 
 local function loadRecentProject(apiKey)
@@ -291,6 +436,7 @@ local function loadRecentProject(apiKey)
 
 	currentProjectId = data.project.id
 	startHeartbeat()
+	startInsertPolling()
 
 	-- TODO: wire this into whatever loads the chat/project view,
 	-- e.g. openProject(data.project.id, data.project.name)
@@ -382,6 +528,7 @@ local function signOut()
 	log("signing out")
 	isPolling = false
 	stopHeartbeat()
+	stopInsertPolling()
 	currentProjectId = nil
 	plugin:SetSetting(SETTING_KEY, nil)
 	statusLabel.Text = ""
