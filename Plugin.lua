@@ -244,8 +244,11 @@ local UIListLayout_2 = Instance.new("UIListLayout")
 local TextLabel = Instance.new("TextLabel")
 local loginButton = Instance.new("TextButton")
 local UICorner = Instance.new("UICorner")
+local loginButtonStroke = Instance.new("UIStroke")
+local loginButtonGradient = Instance.new("UIGradient")
 local codeLabel = Instance.new("TextBox")
 local UICorner_2 = Instance.new("UICorner")
+local codeLabelStroke = Instance.new("UIStroke")
 local UIPadding_2 = Instance.new("UIPadding")
 local statusLabel = Instance.new("TextLabel")
 local SignedIn = Instance.new("Frame")
@@ -254,10 +257,11 @@ local connectedLabel = Instance.new("TextLabel")
 local projectLabel = Instance.new("TextLabel")
 local signOutButton = Instance.new("TextButton")
 local UICorner_3 = Instance.new("UICorner")
+local signOutButtonStroke = Instance.new("UIStroke")
 
 Root.Name = "Root"
 Root.Parent = widget
-Root.BackgroundColor3 = Color3.fromRGB(30, 30, 34)
+Root.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 Root.BorderSizePixel = 0
 Root.Size = UDim2.new(1, 0, 1, 0)
 
@@ -289,10 +293,10 @@ TextLabel.Size = UDim2.new(1, 0, 0, 24)
 TextLabel.Font = Enum.Font.GothamBold
 TextLabel.Text = "Galaxium AI"
 TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TextLabel.TextSize = 18.000
+TextLabel.TextSize = 17.000
 
 loginButton.Parent = SignedOut
-loginButton.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+loginButton.BackgroundColor3 = Color3.fromRGB(107, 59, 189)
 loginButton.LayoutOrder = 2
 loginButton.Position = UDim2.new(0.474362642, 0, 0.212500006, 0)
 loginButton.Size = UDim2.new(0.18016991, 0, 0, 28)
@@ -303,25 +307,43 @@ loginButton.TextSize = 12.000
 loginButton.TextWrapped = true
 loginButton.AutoButtonColor = true
 
-UICorner.CornerRadius = UDim.new(0, 6)
+UICorner.CornerRadius = UDim.new(0, 7)
 UICorner.Parent = loginButton
 
+loginButtonGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(124, 77, 225)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(91, 33, 182)),
+})
+loginButtonGradient.Rotation = 160
+loginButtonGradient.Parent = loginButton
+
+loginButtonStroke.Color = Color3.fromRGB(255, 255, 255)
+loginButtonStroke.Transparency = 0.88
+loginButtonStroke.Thickness = 1
+loginButtonStroke.Parent = loginButton
+
 codeLabel.Parent = SignedOut
-codeLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+codeLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+codeLabel.BackgroundTransparency = 0.6
 codeLabel.LayoutOrder = 3
 codeLabel.Position = UDim2.new(0, 0, 0.449999988, 0)
 codeLabel.Size = UDim2.new(0.22379604, 0, 0, 36)
 codeLabel.ClearTextOnFocus = false
 codeLabel.Font = Enum.Font.Gotham
 codeLabel.Text = ""
-codeLabel.TextColor3 = Color3.fromRGB(200, 200, 205)
+codeLabel.TextColor3 = Color3.fromRGB(212, 212, 220)
 codeLabel.TextSize = 13.000
 codeLabel.TextWrapped = true
 codeLabel.TextEditable = false
 codeLabel.Visible = false
 
-UICorner_2.CornerRadius = UDim.new(0, 6)
+UICorner_2.CornerRadius = UDim.new(0, 8)
 UICorner_2.Parent = codeLabel
+
+codeLabelStroke.Color = Color3.fromRGB(255, 255, 255)
+codeLabelStroke.Transparency = 0.91
+codeLabelStroke.Thickness = 1
+codeLabelStroke.Parent = codeLabel
 
 UIPadding_2.Parent = codeLabel
 UIPadding_2.PaddingLeft = UDim.new(0, 8)
@@ -333,7 +355,7 @@ statusLabel.LayoutOrder = 4
 statusLabel.Size = UDim2.new(1, 0, 0, 20)
 statusLabel.Font = Enum.Font.Gotham
 statusLabel.Text = ""
-statusLabel.TextColor3 = Color3.fromRGB(150, 150, 155)
+statusLabel.TextColor3 = Color3.fromRGB(154, 154, 165)
 statusLabel.TextSize = 12.000
 
 SignedIn.Name = "SignedIn"
@@ -354,7 +376,7 @@ connectedLabel.LayoutOrder = 1
 connectedLabel.Size = UDim2.new(1, 0, 0, 20)
 connectedLabel.Font = Enum.Font.GothamMedium
 connectedLabel.Text = "Connected to Galaxium \xE2\x9C\x93"
-connectedLabel.TextColor3 = Color3.fromRGB(120, 220, 150)
+connectedLabel.TextColor3 = Color3.fromRGB(74, 222, 128)
 connectedLabel.TextSize = 14.000
 
 projectLabel.Parent = SignedIn
@@ -363,21 +385,27 @@ projectLabel.LayoutOrder = 2
 projectLabel.Size = UDim2.new(1, 0, 0, 18)
 projectLabel.Font = Enum.Font.Gotham
 projectLabel.Text = ""
-projectLabel.TextColor3 = Color3.fromRGB(170, 170, 178)
+projectLabel.TextColor3 = Color3.fromRGB(154, 154, 165)
 projectLabel.TextSize = 12.000
 projectLabel.TextTruncate = Enum.TextTruncate.AtEnd
 
 signOutButton.Parent = SignedIn
-signOutButton.BackgroundColor3 = Color3.fromRGB(50, 50, 56)
+signOutButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+signOutButton.BackgroundTransparency = 1
 signOutButton.LayoutOrder = 3
 signOutButton.Size = UDim2.new(1, 0, 0, 30)
 signOutButton.Font = Enum.Font.Gotham
 signOutButton.Text = "Sign out"
-signOutButton.TextColor3 = Color3.fromRGB(220, 220, 225)
+signOutButton.TextColor3 = Color3.fromRGB(154, 154, 165)
 signOutButton.TextSize = 13.000
 
-UICorner_3.CornerRadius = UDim.new(0, 6)
+UICorner_3.CornerRadius = UDim.new(0, 8)
 UICorner_3.Parent = signOutButton
+
+signOutButtonStroke.Color = Color3.fromRGB(255, 255, 255)
+signOutButtonStroke.Transparency = 0.92
+signOutButtonStroke.Thickness = 1
+signOutButtonStroke.Parent = signOutButton
 
 local isPolling = false
 
