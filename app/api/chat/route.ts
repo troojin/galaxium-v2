@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getRequestContext } from "@cloudflare/next-on-pages";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { createClient as createServiceClient, SupabaseClient } from "@supabase/supabase-js";
 import { createChatCompletionStream, ChatMessage } from "@/lib/ai/client";
 import { createClient } from "@/lib/supabase/server";
 import { SYSTEM_PROMPT, parseGalaxiumResponse } from "@/lib/ai/rules";
@@ -70,7 +70,7 @@ async function consumeAndPersist({
   userMessageToPersist,
 }: {
   stream: ReadableStream<Uint8Array>;
-  supabaseAdmin: ReturnType<typeof createServiceClient>;
+  supabaseAdmin: SupabaseClient;
   projectId: string;
   userMessageToPersist: ChatMessage | null;
 }) {
