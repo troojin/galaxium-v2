@@ -682,7 +682,7 @@ export default function ProjectChatPage() {
     () => messages.filter((m) => m.role === "user").length,
     [messages]
   );
-  const limitReached = userPromptCount >= FREE_PROMPT_LIMIT && !pluginConnected;
+  const limitReached = showLimitToast;
 
   const streamAssistantReply = useCallback(
     async (
@@ -923,6 +923,7 @@ export default function ProjectChatPage() {
         * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
         textarea::placeholder { color: #6b6b74; }
         textarea:focus { outline: none; }
+        textarea:disabled { cursor: not-allowed; }
 
         .back-link { transition: color 0.2s ease, border-color 0.2s ease, transform 0.15s ease; }
         .back-link:hover { color: #c4b5fd !important; border-color: rgba(139,92,246,0.35) !important; }
@@ -931,7 +932,7 @@ export default function ProjectChatPage() {
         .send-btn { transition: filter 0.2s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
         .send-btn:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
         .send-btn:active:not(:disabled) { transform: translateY(0) scale(0.96); }
-        .send-btn:disabled { opacity: 0.45; cursor: default; }
+        .send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
         .stop-btn { transition: border-color 0.2s ease, color 0.2s ease, transform 0.15s ease; }
         .stop-btn:hover { border-color: rgba(248,113,113,0.5) !important; color: #fca5a5 !important; }
@@ -1786,6 +1787,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     background: "#050505",
     borderColor: "rgba(255,255,255,0.05)",
     boxShadow: "none",
+    cursor: "not-allowed",
   },
   textarea: {
     flex: 1,
