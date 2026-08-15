@@ -43,6 +43,15 @@ function escapeHtml(str: string): string {
 }
 
 const URL_REGEX = /((?:https?:\/\/|www\.)[^\s<>"')\]]+)/gi;
+const TRAILING_PUNCTUATION_REGEX = /^(.*?)([.,!?;:'")\]]+)$/;
+
+function splitTrailingPunctuation(url: string): { url: string; trailing: string } {
+  const match = url.match(TRAILING_PUNCTUATION_REGEX);
+  if (match) {
+    return { url: match[1], trailing: match[2] };
+  }
+  return { url, trailing: "" };
+}
 
 function linkifyText(text: string): React.ReactNode[] {
   const parts = text.split(URL_REGEX);
@@ -50,18 +59,21 @@ function linkifyText(text: string): React.ReactNode[] {
     if (!part) return null;
     const isUrl = i % 2 === 1;
     if (isUrl) {
-      const href = part.startsWith("http") ? part : `https://${part}`;
+      const { url: cleanUrl, trailing } = splitTrailingPunctuation(part);
+      const href = cleanUrl.startsWith("http") ? cleanUrl : `https://${cleanUrl}`;
       return (
-        <a
-          key={i}
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="chat-link"
-          style={styles.chatLink}
-        >
-          {part}
-        </a>
+        <React.Fragment key={i}>
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="chat-link"
+            style={styles.chatLink}
+          >
+            {cleanUrl}
+          </a>
+          {trailing}
+        </React.Fragment>
       );
     }
     return <React.Fragment key={i}>{part}</React.Fragment>;
