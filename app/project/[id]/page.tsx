@@ -460,35 +460,26 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
 }
 
 function LimitReachedToast({
-  onClose,
   pluginConnected,
 }: {
-  onClose: () => void;
   pluginConnected: boolean;
 }) {
   return (
     <div className="limit-toast-in" style={styles.limitToast}>
+      <div className="limit-toast-sheen" style={styles.limitToastSheen} />
       <div style={styles.limitToastHeader}>
-        <span style={styles.limitToastHeaderLeft}>
-          <span style={styles.limitToastIconWrap}>
-            <LockIcon />
-          </span>
-          <span style={styles.limitToastTitle}>Prompt limit reached</span>
+        <span className="limit-toast-icon-in" style={styles.limitToastIconWrap}>
+          <LockIcon />
         </span>
-        <button
-          style={styles.modalCloseBtn}
-          onClick={onClose}
-          aria-label="Close"
-        >
-          ✕
-        </button>
+        <span style={styles.limitToastTitle}>Prompt limit reached</span>
       </div>
       <p style={styles.limitToastText}>
-        You've used your {FREE_PROMPT_LIMIT} free prompts for this project. Connect the Roblox
-        Studio plugin to keep chatting with Galaxium.
+        Hey stranger, looks like you've used your {FREE_PROMPT_LIMIT} free prompts for this
+        project. Connect the Roblox Studio plugin to keep chatting with Galaxium.
       </p>
       <div style={styles.limitToastStatus}>
         <span
+          className={pluginConnected ? undefined : "limit-toast-dot-pulse"}
           style={{
             ...styles.presenceDot,
             ...(pluginConnected ? styles.presenceDotOn : styles.presenceDotOff),
@@ -1023,10 +1014,45 @@ export default function ProjectChatPage() {
           to   { opacity: 1; transform: scale(1) translateY(0); }
         }
 
-        .limit-toast-in { animation: limitToastIn 0.32s cubic-bezier(0.16, 1, 0.3, 1); }
+        .limit-toast-in { animation: limitToastIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; }
         @keyframes limitToastIn {
-          from { opacity: 0; transform: translateY(16px) scale(0.96); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
+          from { opacity: 0; transform: translateX(420px); }
+          60%  { opacity: 1; }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+
+        .limit-toast-icon-in { animation: limitToastIconIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: 0.18s; }
+        @keyframes limitToastIconIn {
+          from { opacity: 0; transform: scale(0.6) rotate(-8deg); }
+          to   { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+
+        .limit-toast-dot-pulse { animation: limitToastDotPulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes limitToastDotPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(1.3); }
+        }
+
+        .limit-toast-sheen {
+          animation: limitToastSheenMove 3.2s ease-in-out infinite;
+        }
+        @keyframes limitToastSheenMove {
+          0%   { opacity: 0.5; }
+          50%  { opacity: 1; }
+          100% { opacity: 0.5; }
+        }
+
+        .generating-text-shimmer {
+          background: linear-gradient(90deg, #9a9aa5 0%, #f0f0f5 50%, #9a9aa5 100%);
+          background-size: 200% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          animation: generatingShimmer 1.6s ease-in-out infinite;
+        }
+        @keyframes generatingShimmer {
+          0%   { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
         }
 
         .followup-gradient {
@@ -1181,8 +1207,7 @@ export default function ProjectChatPage() {
                           <div style={styles.assistantBubble}>
                             {isStreamingThis ? (
                               <span style={styles.generatingRow}>
-                                <span style={styles.generatingDot} />
-                                <span style={styles.generatingText}>
+                                <span className="generating-text-shimmer" style={styles.generatingText}>
                                   {streamingMessages[streamingMsgIndex]}
                                 </span>
                               </span>
@@ -1274,10 +1299,7 @@ export default function ProjectChatPage() {
       )}
 
       {showLimitToast ? (
-        <LimitReachedToast
-          onClose={() => setShowLimitToast(false)}
-          pluginConnected={pluginConnected}
-        />
+        <LimitReachedToast pluginConnected={pluginConnected} />
       ) : null}
     </div>
   );
@@ -1476,13 +1498,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-  },
-  generatingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-    flexShrink: 0,
-    background: "#a78bfa",
   },
   generatingText: {
     color: "#9a9aa5",
@@ -1804,23 +1819,30 @@ const styles: { [key: string]: React.CSSProperties } = {
     right: 20,
     width: 320,
     maxWidth: "calc(100vw - 40px)",
-    background: "linear-gradient(160deg, rgba(16,16,18,0.98) 0%, rgba(8,8,10,0.98) 100%)",
-    border: "1px solid rgba(139,92,246,0.25)",
-    borderRadius: 14,
-    boxShadow: "0 20px 48px -12px rgba(0,0,0,0.75)",
-    padding: 14,
+    background: "linear-gradient(150deg, rgba(45,24,90,0.55) 0%, rgba(16,16,20,0.95) 38%, rgba(6,6,8,0.97) 100%)",
+    border: "1px solid rgba(139,92,246,0.28)",
+    borderRadius: 16,
+    boxShadow: "0 24px 56px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(139,92,246,0.06), 0 0 40px -8px rgba(124,58,237,0.35)",
+    backdropFilter: "blur(20px) saturate(150%)",
+    WebkitBackdropFilter: "blur(20px) saturate(150%)",
+    padding: 16,
     zIndex: 200,
+    overflow: "hidden",
+  },
+  limitToastSheen: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "50%",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 100%)",
+    pointerEvents: "none",
   },
   limitToastHeader: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 9,
     marginBottom: 8,
-  },
-  limitToastHeaderLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
   },
   limitToastIconWrap: {
     display: "flex",
@@ -1829,9 +1851,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     width: 26,
     height: 26,
     borderRadius: 8,
-    background: "rgba(139,92,246,0.15)",
-    border: "1px solid rgba(139,92,246,0.25)",
-    color: "#a78bfa",
+    background: "rgba(139,92,246,0.18)",
+    border: "1px solid rgba(139,92,246,0.3)",
+    color: "#c4b5fd",
     flexShrink: 0,
   },
   limitToastTitle: {
@@ -1849,10 +1871,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     alignItems: "center",
     gap: 8,
-    padding: "8px 10px",
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.06)",
-    borderRadius: 8,
   },
   limitToastStatusText: {
     color: "#9a9aa5",
