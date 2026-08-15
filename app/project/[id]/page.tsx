@@ -42,6 +42,32 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+const URL_REGEX = /((?:https?:\/\/|www\.)[^\s<>"')\]]+)/gi;
+
+function linkifyText(text: string): React.ReactNode[] {
+  const parts = text.split(URL_REGEX);
+  return parts.map((part, i) => {
+    if (!part) return null;
+    const isUrl = i % 2 === 1;
+    if (isUrl) {
+      const href = part.startsWith("http") ? part : `https://${part}`;
+      return (
+        <a
+          key={i}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="chat-link"
+          style={styles.chatLink}
+        >
+          {part}
+        </a>
+      );
+    }
+    return <React.Fragment key={i}>{part}</React.Fragment>;
+  });
+}
+
 const LUA_KEYWORDS = new Set([
   "and", "break", "do", "else", "elseif", "end", "false", "for", "function",
   "goto", "if", "in", "local", "nil", "not", "or", "repeat", "return", "then",
@@ -411,7 +437,7 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
 
   return (
     <div style={styles.galaxiumMessage}>
-      <p style={styles.explanationText}>{response.explanation}</p>
+      <p style={styles.explanationText}>{linkifyText(response.explanation)}</p>
 
       {flat.length > 0 ? (
         <div style={styles.createdSection}>
@@ -449,7 +475,7 @@ function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
       ) : null}
 
       {response.followUp ? (
-        <p className="followup-gradient" style={styles.followUpText}>{response.followUp}</p>
+        <p className="followup-gradient" style={styles.followUpText}>{linkifyText(response.followUp)}</p>
       ) : null}
 
       {activeScript ? (
@@ -479,7 +505,6 @@ function LimitReachedToast({
       </p>
       <div style={styles.limitToastStatus}>
         <span
-          className={pluginConnected ? undefined : "limit-toast-dot-pulse"}
           style={{
             ...styles.presenceDot,
             ...(pluginConnected ? styles.presenceDotOn : styles.presenceDotOff),
@@ -929,6 +954,9 @@ export default function ProjectChatPage() {
         .back-link:hover { color: #c4b5fd !important; border-color: rgba(139,92,246,0.35) !important; }
         .back-link:active { transform: scale(0.92); }
 
+        .chat-link { text-decoration: none; }
+        .chat-link:hover { text-decoration: underline; }
+
         .send-btn { transition: filter 0.2s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
         .send-btn:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
         .send-btn:active:not(:disabled) { transform: translateY(0) scale(0.96); }
@@ -1026,12 +1054,6 @@ export default function ProjectChatPage() {
         @keyframes limitToastIconIn {
           from { opacity: 0; transform: scale(0.6) rotate(-8deg); }
           to   { opacity: 1; transform: scale(1) rotate(0deg); }
-        }
-
-        .limit-toast-dot-pulse { animation: limitToastDotPulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        @keyframes limitToastDotPulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(1.3); }
         }
 
         .limit-toast-sheen {
@@ -1202,7 +1224,7 @@ export default function ProjectChatPage() {
                       style={msg.role === "user" ? styles.userRow : styles.assistantRow}
                     >
                       {msg.role === "user" ? (
-                        <div style={styles.userBubble}>{msg.content}</div>
+                        <div style={styles.userBubble}>{linkifyText(msg.content)}</div>
                       ) : (
                         <div style={styles.assistantColumn}>
                           <div style={styles.assistantBubble}>
@@ -1241,7 +1263,7 @@ export default function ProjectChatPage() {
                                     </pre>
                                   </div>
                                 ) : (
-                                  msg.content
+                                  linkifyText(msg.content)
                                 )}
                               </div>
                             )}
@@ -1500,6 +1522,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
     padding: "2px 0",
+  },
+  chatLink: {
+    color: "#60a5fa",
+    textDecoration: "none",
+    wordBreak: "break-word",
   },
   generatingRow: {
     display: "inline-flex",
@@ -1835,7 +1862,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     background: "#000000",
     border: "1px solid rgba(255,255,255,0.09)",
     borderRadius: 16,
-    boxShadow: "0 24px 56px -12px rgba(0,0,0,0.8)",
     padding: 16,
     zIndex: 200,
     overflow: "hidden",
