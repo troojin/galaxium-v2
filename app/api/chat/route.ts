@@ -63,6 +63,53 @@ function cleanMessages(messages: ChatMessage[]): ChatMessage[] {
     }));
 }
 
+const MAX_CONTEXT_CHARS = 20000;
+const CONTEXT_STALE_AFTER_MS = 2 * 60 * 1000;
+
+async function buildDataModelContextMessage(
+  supabaseAdmin: SupabaseClient,
+  projectId: string
+): Promise<ChatMessage | null> {
+  const { data, error } = await supabaseAdmin
+    .from("plugin_datamodel_snapshots")
+    .select("snapshot, updated_at")
+    .eq("project_id", projectId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to fetch DataModel snapshot:", error);
+    return null;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const age = Date.now() - new Date(data.updated_at).getTime();
+  if (age > CONTEXT_STALE_AFTER_MS) {
+    return null;
+  }
+
+  let json = JSON.stringify(data.snapshot);
+  let truncated = false;
+  if (json.length > MAX_CONTEXT_CHARS) {
+    json = json.slice(0, MAX_CONTEXT_CHARS);
+    truncated = true;
+  }
+
+  const content =
+    "Here is the current state of the Roblox place, captured from Studio. " +
+    "Use it to know what already exists before creating anything. If the user refers to an existing " +
+    "instance by name, target it using its exact existing path as the parent field for any new children " +
+    "instead of recreating it, and do not duplicate instances that already exist unless explicitly asked " +
+    "to create a new one." +
+    (truncated ? " (truncated for length)" : "") +
+    "\n\n" +
+    json;
+
+  return { role: "system", content };
+}
+
 async function consumeAndPersist({
   stream,
   supabaseAdmin,
@@ -334,18 +381,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const supabaseAdmin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const contextMessage = await buildDataModelContextMessage(supabaseAdmin, projectId);
+
+    const aiMessages: ChatMessage[] = contextMessage
+      ? [SYSTEM_PROMPT, contextMessage, ...trimmed]
+      : [SYSTEM_PROMPT, ...trimmed];
+
     const stream = await createChatCompletionStream({
-      messages: [SYSTEM_PROMPT, ...trimmed],
+      messages: aiMessages,
       temperature: 0.4,
       max_tokens: 4096,
     });
 
     const [clientStream, persistStream] = stream.tee();
-
-    const supabaseAdmin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
 
     const ctx = getRequestContext().ctx;
     ctx.waitUntil(

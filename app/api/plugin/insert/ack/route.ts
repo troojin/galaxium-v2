@@ -15,10 +15,15 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => null);
-    const insertId = body?.insertId;
+    const projectId = body?.projectId;
+    const snapshot = body?.snapshot;
 
-    if (typeof insertId !== "string" || insertId.length === 0) {
-      return NextResponse.json({ error: "Missing insertId" }, { status: 400 });
+    if (typeof projectId !== "string" || projectId.length === 0) {
+      return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
+    }
+
+    if (!snapshot || typeof snapshot !== "object") {
+      return NextResponse.json({ error: "Missing or invalid snapshot" }, { status: 400 });
     }
 
     const supabase = createClient(
@@ -33,7 +38,7 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (keyError) {
-      console.error("plugin insert ack key lookup error:", keyError);
+      console.error("plugin context key lookup error:", keyError);
       return NextResponse.json({ error: keyError.message }, { status: 500 });
     }
 
@@ -41,36 +46,41 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
     }
 
-    const { data: insertRow, error: fetchError } = await supabase
-      .from("plugin_inserts")
-      .select("id, projects!inner(user_id)")
-      .eq("id", insertId)
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("id", projectId)
+      .eq("user_id", keyRow.user_id)
       .maybeSingle();
 
-    if (fetchError) {
-      console.error("plugin insert ack lookup error:", fetchError);
-      return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    if (projectError) {
+      console.error("plugin context project lookup error:", projectError);
+      return NextResponse.json({ error: projectError.message }, { status: 500 });
     }
 
-    const ownerId = (insertRow as any)?.projects?.user_id;
-
-    if (!insertRow || ownerId !== keyRow.user_id) {
-      return NextResponse.json({ error: "Insert not found" }, { status: 404 });
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    const { error: updateError } = await supabase
-      .from("plugin_inserts")
-      .update({ status: "applied", applied_at: new Date().toISOString() })
-      .eq("id", insertId);
+    const { error: upsertError } = await supabase
+      .from("plugin_datamodel_snapshots")
+      .upsert(
+        {
+          project_id: projectId,
+          snapshot,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "project_id" }
+      );
 
-    if (updateError) {
-      console.error("plugin insert ack update error:", updateError);
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    if (upsertError) {
+      console.error("plugin context upsert error:", upsertError);
+      return NextResponse.json({ error: upsertError.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("plugin insert ack crashed:", err);
+    console.error("plugin context crashed:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unexpected server error" },
       { status: 500 }

@@ -17,7 +17,199 @@ local function warn(message)
 	end
 end
 
--- ===== Toolbar / Widget =====
+local DataModelDump = {}
+
+local DEFAULT_SERVICE_NAMES = {
+	"Workspace",
+	"ServerScriptService",
+	"ServerStorage",
+	"ReplicatedStorage",
+	"ReplicatedFirst",
+	"StarterGui",
+	"StarterPlayer",
+	"StarterPack",
+	"Lighting",
+	"SoundService",
+	"Teams",
+}
+
+local SKIP_CLASSNAMES = {
+	Camera = true,
+	Terrain = true,
+}
+
+local DUMP_PROPERTY_MAP = {
+	BasePart = { "Size", "Position", "Orientation", "Anchored", "CanCollide", "Transparency", "Material", "Color" },
+	Model = { "PrimaryPart" },
+	Part = { "Shape" },
+	MeshPart = { "MeshId", "TextureID" },
+	SpawnLocation = { "TeamColor" },
+	PointLight = { "Brightness", "Range", "Color" },
+	SpotLight = { "Brightness", "Range", "Angle", "Color" },
+	SurfaceGui = { "Face", "AlwaysOnTop" },
+	ScreenGui = { "ResetOnSpawn", "ZIndexBehavior" },
+	TextLabel = { "Text", "TextColor3", "TextSize", "Font" },
+	TextButton = { "Text", "TextColor3", "TextSize", "Font" },
+	ImageLabel = { "Image" },
+	Frame = { "BackgroundColor3", "BackgroundTransparency" },
+	Sound = { "SoundId", "Volume", "Looped", "Playing" },
+	RemoteEvent = {},
+	RemoteFunction = {},
+	BindableEvent = {},
+	BindableFunction = {},
+	Attachment = { "Position" },
+	Weld = { "Part0", "Part1" },
+	Motor6D = { "Part0", "Part1" },
+}
+
+local DUMP_SCRIPT_CLASSNAMES = {
+	Script = true,
+	LocalScript = true,
+	ModuleScript = true,
+}
+
+local function dumpSafeGetProperty(instance, propName)
+	local ok, value = pcall(function()
+		return instance[propName]
+	end)
+	if not ok then
+		return nil
+	end
+	local t = typeof(value)
+	if t == "Vector3" then
+		return { x = value.X, y = value.Y, z = value.Z }
+	elseif t == "Vector2" then
+		return { x = value.X, y = value.Y }
+	elseif t == "Color3" then
+		return { r = value.R, g = value.G, b = value.B }
+	elseif t == "CFrame" then
+		local pos = value.Position
+		return { x = pos.X, y = pos.Y, z = pos.Z }
+	elseif t == "EnumItem" then
+		return tostring(value)
+	elseif t == "Instance" then
+		return value and value:GetFullName() or nil
+	elseif t == "boolean" or t == "number" or t == "string" then
+		return value
+	else
+		local ok2, str = pcall(tostring, value)
+		return ok2 and str or nil
+	end
+end
+
+local function dumpGetPropertiesFor(instance)
+	local props = {}
+	for className, propList in pairs(DUMP_PROPERTY_MAP) do
+		if instance:IsA(className) then
+			for _, propName in ipairs(propList) do
+				local value = dumpSafeGetProperty(instance, propName)
+				if value ~= nil then
+					props[propName] = value
+				end
+			end
+		end
+	end
+
+	local ok, attrs = pcall(function()
+		return instance:GetAttributes()
+	end)
+	if ok and next(attrs) ~= nil then
+		props.Attributes = attrs
+	end
+
+	if next(props) == nil then
+		return nil
+	end
+	return props
+end
+
+local function dumpSerializeInstance(instance, options)
+	if SKIP_CLASSNAMES[instance.ClassName] then
+		return nil
+	end
+
+	local node = {
+		Name = instance.Name,
+		ClassName = instance.ClassName,
+	}
+
+	if DUMP_SCRIPT_CLASSNAMES[instance.ClassName] then
+		local ok, source = pcall(function()
+			return instance.Source
+		end)
+		node.Source = ok and source or nil
+		local ok2, enabled = pcall(function()
+			return instance.Enabled
+		end)
+		if ok2 then
+			node.Enabled = enabled
+		end
+		local ok3, rc = pcall(function()
+			return instance.RunContext
+		end)
+		if ok3 and instance.ClassName == "Script" then
+			node.RunContext = tostring(rc)
+		end
+	end
+
+	local props = dumpGetPropertiesFor(instance)
+	if props then
+		node.Properties = props
+	end
+
+	local children = instance:GetChildren()
+	if #children > 0 then
+		local serializedChildren = {}
+		for _, child in ipairs(children) do
+			local serializedChild = dumpSerializeInstance(child, options)
+			if serializedChild then
+				table.insert(serializedChildren, serializedChild)
+			end
+		end
+		if #serializedChildren > 0 then
+			node.Children = serializedChildren
+		end
+	end
+
+	return node
+end
+
+function DataModelDump.dump(roots, options)
+	options = options or {}
+	local result = {
+		GeneratedAt = os.time(),
+		PlaceId = game.PlaceId,
+		Roots = {},
+	}
+
+	local rootInstances = roots
+	if not rootInstances then
+		rootInstances = {}
+		if options.includeAll then
+			for _, child in ipairs(game:GetChildren()) do
+				table.insert(rootInstances, child)
+			end
+		else
+			for _, name in ipairs(DEFAULT_SERVICE_NAMES) do
+				local ok, service = pcall(function()
+					return game:GetService(name)
+				end)
+				if ok and service then
+					table.insert(rootInstances, service)
+				end
+			end
+		end
+	end
+
+	for _, root in ipairs(rootInstances) do
+		local serialized = dumpSerializeInstance(root, options)
+		if serialized then
+			table.insert(result.Roots, serialized)
+		end
+	end
+
+	return result
+end
 
 local toolbar = plugin:CreateToolbar("Galaxium AI")
 local toggleButton = toolbar:CreateButton(
@@ -43,8 +235,6 @@ toggleButton.Click:Connect(function()
 	widget.Enabled = not widget.Enabled
 	log("toggle clicked, widget enabled: " .. tostring(widget.Enabled))
 end)
-
--- ===== UI =====
 
 local Root = Instance.new("Frame")
 local UIListLayout = Instance.new("UIListLayout")
@@ -189,16 +379,12 @@ signOutButton.TextSize = 13.000
 UICorner_3.CornerRadius = UDim.new(0, 6)
 UICorner_3.Parent = signOutButton
 
--- ===== State =====
-
 local isPolling = false
 
 local function setSignedInUI(isSignedIn)
 	SignedOut.Visible = not isSignedIn
 	SignedIn.Visible = isSignedIn
 end
-
--- ===== HTTP helper =====
 
 local function request(method, path, body, apiKey)
 	log("request: " .. method .. " " .. path)
@@ -241,8 +427,6 @@ local function request(method, path, body, apiKey)
 	return decoded, nil
 end
 
--- ===== Presence heartbeat =====
-
 local currentProjectId = nil
 local heartbeatRunning = false
 
@@ -268,52 +452,97 @@ local function stopHeartbeat()
 	heartbeatRunning = false
 end
 
--- ===== Instance builder (auto-insert) =====
+local contextSyncRunning = false
 
--- NOTE: this assumes each AI-generated node looks like:
--- {
---   className = "Part",
---   name = "Baseplate",
---   properties = { Anchored = true, Size = {12, 1, 12}, ... },
---   source = "print('hi')",      -- only for Script/LocalScript/ModuleScript
---   children = { <node>, ... },
--- }
--- and that the top-level payload looks like:
--- { parent = "Workspace", instances = { <node>, <node>, ... } }
---
--- I haven't seen rules.ts (your AI's JSON schema), so this is a best guess
--- at the shape and at how typed values like Vector3/Color3/UDim2/CFrame get
--- encoded. Paste rules.ts or a sample AI output and I'll make this exact —
--- right now, any property whose value isn't a plain string/number/boolean
--- will likely fail silently (logged as a warning, not a crash).
+local function startContextSync()
+	if contextSyncRunning then return end
+	contextSyncRunning = true
 
-local function coercePropertyValue(key, value)
-	-- Plain types pass straight through.
-	if typeof(value) ~= "table" then
+	task.spawn(function()
+		while contextSyncRunning do
+			local apiKey = plugin:GetSetting(SETTING_KEY)
+			if apiKey and currentProjectId then
+				local ok, snapshot = pcall(DataModelDump.dump)
+				if ok then
+					local _, err = request("POST", "/context", { projectId = currentProjectId, snapshot = snapshot }, apiKey)
+					if err then
+						warn("context sync failed: " .. tostring(err))
+					end
+				else
+					warn("failed to build DataModel dump: " .. tostring(snapshot))
+				end
+			end
+			task.wait(20)
+		end
+	end)
+end
+
+local function stopContextSync()
+	contextSyncRunning = false
+end
+
+local KNOWN_SERVICES = {
+	Workspace = function() return workspace end,
+	ServerScriptService = function() return game:GetService("ServerScriptService") end,
+	ServerStorage = function() return game:GetService("ServerStorage") end,
+	ReplicatedStorage = function() return game:GetService("ReplicatedStorage") end,
+	ReplicatedFirst = function() return game:GetService("ReplicatedFirst") end,
+	StarterGui = function() return game:GetService("StarterGui") end,
+	StarterPack = function() return game:GetService("StarterPack") end,
+	StarterPlayer = function() return game:GetService("StarterPlayer") end,
+	Lighting = function() return game:GetService("Lighting") end,
+	SoundService = function() return game:GetService("SoundService") end,
+	Chat = function() return game:GetService("Chat") end,
+	TextChatService = function() return game:GetService("TextChatService") end,
+	StarterPlayerScripts = function()
+		return game:GetService("StarterPlayer"):WaitForChild("StarterPlayerScripts")
+	end,
+	StarterCharacterScripts = function()
+		return game:GetService("StarterPlayer"):WaitForChild("StarterCharacterScripts")
+	end,
+}
+
+local function coercePropertyValue(value)
+	if typeof(value) ~= "table" or type(value.type) ~= "string" then
 		return value
 	end
 
-	-- Heuristic decoding for common typed properties, based on array length.
-	-- Adjust once we know the real schema.
-	local n = #value
-	if n == 3 then
-		-- Could be Vector3 or Color3 (0-255) - assume Vector3 for Size/Position-like keys.
-		if key == "Color" or key == "BrickColor" then
-			return Color3.fromRGB(value[1], value[2], value[3])
+	local t = value.type
+
+	if t == "Vector3" then
+		return Vector3.new(value.x, value.y, value.z)
+	elseif t == "Color3" then
+		return Color3.fromRGB(value.r, value.g, value.b)
+	elseif t == "UDim2" then
+		return UDim2.new(value.xScale, value.xOffset, value.yScale, value.yOffset)
+	elseif t == "CFrame" then
+		local pos = value.position or { x = 0, y = 0, z = 0 }
+		local cf = CFrame.new(pos.x, pos.y, pos.z)
+		if value.orientation then
+			local o = value.orientation
+			cf = cf * CFrame.Angles(math.rad(o.x), math.rad(o.y), math.rad(o.z))
 		end
-		return Vector3.new(value[1], value[2], value[3])
-	elseif n == 4 then
-		-- UDim2-ish: {scaleX, offsetX, scaleY, offsetY}
-		return UDim2.new(value[1], value[2], value[3], value[4])
-	elseif n == 2 then
-		return UDim.new(value[1], value[2])
+		return cf
+	elseif t == "EnumItem" then
+		local ok, enumItem = pcall(function()
+			return Enum[value.enumType][value.value]
+		end)
+		if ok then
+			return enumItem
+		end
+		warn("invalid EnumItem " .. tostring(value.enumType) .. "." .. tostring(value.value))
+		return nil
 	end
 
-	return value
+	warn("unknown typed property value: " .. tostring(t))
+	return nil
 end
 
-local function applyProperty(instance, key, value)
-	local coerced = coercePropertyValue(key, value)
+local function applyProperty(instance, key, rawValue)
+	local coerced = coercePropertyValue(rawValue)
+	if coerced == nil then
+		return
+	end
 	local ok, err = pcall(function()
 		instance[key] = coerced
 	end)
@@ -322,16 +551,26 @@ local function applyProperty(instance, key, value)
 	end
 end
 
-local function buildInstance(node, parent)
+local function walkAndCreate(node, structuralParentPath, flatList, instancesByPath)
+	local parentPath = node.parent
+	if not parentPath or parentPath == "" then
+		parentPath = structuralParentPath
+	end
+
+	local ownPath
+	if parentPath then
+		ownPath = parentPath .. "." .. node.name
+	else
+		ownPath = node.name
+	end
+
 	local ok, inst = pcall(Instance.new, node.className)
 	if not ok then
 		warn("failed to create instance of class " .. tostring(node.className) .. ": " .. tostring(inst))
-		return nil
+		return
 	end
 
-	if node.name then
-		inst.Name = node.name
-	end
+	inst.Name = node.name
 
 	if node.properties then
 		for key, value in pairs(node.properties) do
@@ -343,38 +582,68 @@ local function buildInstance(node, parent)
 		inst.Source = node.source
 	end
 
-	inst.Parent = parent
+	instancesByPath[ownPath] = inst
+	table.insert(flatList, { instance = inst, parentPath = parentPath, path = ownPath })
 
 	if node.children then
-		for _, childNode in ipairs(node.children) do
-			buildInstance(childNode, inst)
+		for _, child in ipairs(node.children) do
+			walkAndCreate(child, ownPath, flatList, instancesByPath)
 		end
 	end
-
-	return inst
 end
 
-local function resolveParent(name)
-	local map = {
-		Workspace = workspace,
-		ServerScriptService = game:GetService("ServerScriptService"),
-		ServerStorage = game:GetService("ServerStorage"),
-		ReplicatedStorage = game:GetService("ReplicatedStorage"),
-		StarterGui = game:GetService("StarterGui"),
-		StarterPlayer = game:GetService("StarterPlayer"),
-		Lighting = game:GetService("Lighting"),
-	}
-	return map[name] or workspace
+local function resolvePath(path, instancesByPath)
+	if instancesByPath[path] then
+		return instancesByPath[path]
+	end
+
+	local segments = string.split(path, ".")
+	local first = segments[1]
+
+	local root
+	if KNOWN_SERVICES[first] then
+		local ok, result = pcall(KNOWN_SERVICES[first])
+		if not ok then
+			warn("failed to resolve service " .. tostring(first) .. ": " .. tostring(result))
+			return workspace
+		end
+		root = result
+	else
+		warn("unknown root '" .. tostring(first) .. "' in parent path '" .. path .. "', defaulting to Workspace")
+		return workspace
+	end
+
+	local current = root
+	for i = 2, #segments do
+		local child = current:FindFirstChild(segments[i])
+		if not child then
+			warn("could not resolve '" .. path .. "' past '" .. current:GetFullName() .. "', defaulting to that point")
+			return current
+		end
+		current = child
+	end
+
+	return current
 end
 
 local function applyInsert(payload)
-	local targetParent = resolveParent(payload.parent)
+	local flatList = {}
+	local instancesByPath = {}
+
 	for _, node in ipairs(payload.instances or {}) do
-		buildInstance(node, targetParent)
+		walkAndCreate(node, nil, flatList, instancesByPath)
+	end
+
+	for _, entry in ipairs(flatList) do
+		local parent
+		if entry.parentPath then
+			parent = resolvePath(entry.parentPath, instancesByPath)
+		else
+			parent = workspace
+		end
+		entry.instance.Parent = parent
 	end
 end
-
--- ===== Insert polling (auto-insert) =====
 
 local insertPollRunning = false
 
@@ -413,8 +682,6 @@ local function stopInsertPolling()
 	insertPollRunning = false
 end
 
--- ===== Recent project auto-detect =====
-
 local function loadRecentProject(apiKey)
 	log("fetching most recent active project")
 	local data, err = request("GET", "/projects/recent", nil, apiKey)
@@ -437,12 +704,9 @@ local function loadRecentProject(apiKey)
 	currentProjectId = data.project.id
 	startHeartbeat()
 	startInsertPolling()
+	startContextSync()
 
-	-- TODO: wire this into whatever loads the chat/project view,
-	-- e.g. openProject(data.project.id, data.project.name)
 end
-
--- ===== Auth flow =====
 
 local function pollAuth(sessionId)
 	log("starting poll for session: " .. sessionId)
@@ -529,6 +793,7 @@ local function signOut()
 	isPolling = false
 	stopHeartbeat()
 	stopInsertPolling()
+	stopContextSync()
 	currentProjectId = nil
 	plugin:SetSetting(SETTING_KEY, nil)
 	statusLabel.Text = ""
@@ -540,8 +805,6 @@ end
 
 loginButton.MouseButton1Click:Connect(beginSignIn)
 signOutButton.MouseButton1Click:Connect(signOut)
-
--- ===== Init =====
 
 local existingKey = plugin:GetSetting(SETTING_KEY)
 if existingKey then

@@ -30,9 +30,9 @@ function isTruncatedJson(content: string): boolean {
   if (!trimmed.startsWith("{")) return false;
   try {
     JSON.parse(trimmed);
-    return false; // valid JSON — just didn't match the expected schema, not a truncation
+    return false;
   } catch {
-    return true; // starts like JSON but doesn't parse — almost certainly cut off mid-generation
+    return true;
   }
 }
 
@@ -92,8 +92,6 @@ function flattenInstances(
   return out;
 }
 
-// A small pool of varied greetings, mixed by time of day plus a few
-// universal ones so the empty-chat state feels alive instead of static.
 function buildGreeting(name: string): string {
   const hour = new Date().getHours();
 
@@ -347,7 +345,6 @@ function ScriptPreviewModal({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // clipboard unavailable, ignore
     }
   }
 
@@ -496,7 +493,6 @@ export default function ProjectChatPage() {
     return () => { isMounted = false; };
   }, [params.id, supabase, router, toast]);
 
-  // Grab the signed-in user's display name once, for the empty-chat greeting.
   useEffect(() => {
     let isMounted = true;
     async function loadUser() {
@@ -515,8 +511,6 @@ export default function ProjectChatPage() {
     return () => { isMounted = false; };
   }, [supabase]);
 
-  // Picked once per mount (after we know the name) so it stays stable for
-  // the duration of the visit instead of re-rolling on every render.
   const greeting = useMemo(() => buildGreeting(displayName ?? "there"), [displayName]);
 
   useEffect(() => {
@@ -554,9 +548,6 @@ export default function ProjectChatPage() {
     return () => { isMounted = false; };
   }, [params.id, project, supabase]);
 
-  // Poll the plugin_presence table so the topbar dot reflects whether the
-  // Roblox Studio plugin currently has this project open (heartbeats every
-  // ~10s from the plugin; treated as stale after 20s of silence).
   useEffect(() => {
     if (!project) return;
     let isMounted = true;
@@ -625,7 +616,6 @@ export default function ProjectChatPage() {
     setMessageFeedback((prev) => ({ ...prev, [messageId]: type }));
   }, []);
 
-  // Shared streaming logic used by both sendMessage and retryMessage.
   const streamAssistantReply = useCallback(
     async (
       history: { role: string; content: string }[],
@@ -765,7 +755,6 @@ export default function ProjectChatPage() {
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
-        // User cancelled
       } else {
         toast.error("Something went wrong. Try again.");
         setMessages((prev) => prev.filter((m) => m.id !== assistantId));
@@ -776,9 +765,6 @@ export default function ProjectChatPage() {
     }
   }, [input, streaming, messages, params.id, supabase, toast, streamAssistantReply]);
 
-  // Regenerates an assistant reply: deletes that message (and anything after
-  // it) both locally and in Supabase, then re-runs the stream from the same
-  // point in the conversation.
   const retryMessage = useCallback(
     async (assistantMessageId: string) => {
       if (streaming) return;
@@ -834,7 +820,6 @@ export default function ProjectChatPage() {
         }
       } catch (err: unknown) {
         if (err instanceof Error && err.name === "AbortError") {
-          // User cancelled
         } else {
           toast.error("Something went wrong. Try again.");
           setMessages((prev) => prev.filter((m) => m.id !== newAssistantId));
@@ -967,14 +952,6 @@ export default function ProjectChatPage() {
         @keyframes followupShimmer {
           0%   { background-position: 0% 50%; }
           100% { background-position: 300% 50%; }
-        }
-        @keyframes generatingDotPulse {
-          0%, 100% { transform: scale(1); }
-          50%      { transform: scale(1.15); }
-        }
-        @keyframes presencePulse {
-          0%, 100% { box-shadow: 0 0 6px 2px rgba(74,222,128,0.6); }
-          50%      { box-shadow: 0 0 10px 4px rgba(74,222,128,0.85); }
         }
 
         .node-row { transition: background-color 0.2s ease; }
@@ -1261,8 +1238,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   presenceDotOn: {
     background: "#4ade80",
-    boxShadow: "0 0 6px 2px rgba(74,222,128,0.6)",
-    animation: "presencePulse 2s ease-in-out infinite",
   },
   presenceDotOff: {
     background: "#4a4a52",
@@ -1413,7 +1388,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: "50%",
     flexShrink: 0,
     background: "#a78bfa",
-    animation: "generatingDotPulse 1.4s ease-in-out infinite",
   },
   generatingText: {
     color: "#9a9aa5",
