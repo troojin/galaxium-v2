@@ -1268,7 +1268,13 @@ export default function ProjectChatPage() {
           </div>
 
           <div className="input-fade-in" style={styles.inputArea}>
-            <div className="glass-sheen" style={styles.inputCard}>
+            <div
+              className="glass-sheen"
+              style={{
+                ...styles.inputCard,
+                ...(limitReached ? styles.inputCardDisabled : {}),
+              }}
+            >
               <textarea
                 ref={textareaRef}
                 rows={1}
@@ -1277,7 +1283,7 @@ export default function ProjectChatPage() {
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 style={styles.textarea}
-                disabled={streaming}
+                disabled={streaming || limitReached}
               />
               {streaming ? (
                 <button className="stop-btn" style={styles.stopBtn} onClick={stopStreaming}>
@@ -1288,7 +1294,7 @@ export default function ProjectChatPage() {
                   className="send-btn"
                   style={styles.sendBtn}
                   onClick={sendMessage}
-                  disabled={!input.trim() || streaming}
+                  disabled={!input.trim() || streaming || limitReached}
                 >
                   Send ↑
                 </button>
@@ -1776,6 +1782,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: "9px 9px 9px 12px",
     transition: "border-color 0.2s ease, box-shadow 0.2s ease",
   },
+  inputCardDisabled: {
+    background: "#050505",
+    borderColor: "rgba(255,255,255,0.05)",
+    boxShadow: "none",
+  },
   textarea: {
     flex: 1,
     minWidth: 0,
@@ -1819,12 +1830,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     right: 20,
     width: 320,
     maxWidth: "calc(100vw - 40px)",
-    background: "linear-gradient(150deg, rgba(45,24,90,0.55) 0%, rgba(16,16,20,0.95) 38%, rgba(6,6,8,0.97) 100%)",
-    border: "1px solid rgba(139,92,246,0.28)",
+    background: "#000000",
+    border: "1px solid rgba(255,255,255,0.09)",
     borderRadius: 16,
-    boxShadow: "0 24px 56px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(139,92,246,0.06), 0 0 40px -8px rgba(124,58,237,0.35)",
-    backdropFilter: "blur(20px) saturate(150%)",
-    WebkitBackdropFilter: "blur(20px) saturate(150%)",
+    boxShadow: "0 24px 56px -12px rgba(0,0,0,0.8)",
     padding: 16,
     zIndex: 200,
     overflow: "hidden",
@@ -1835,25 +1844,20 @@ const styles: { [key: string]: React.CSSProperties } = {
     left: 0,
     right: 0,
     height: "50%",
-    background: "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 100%)",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)",
     pointerEvents: "none",
   },
   limitToastHeader: {
     display: "flex",
     alignItems: "center",
-    gap: 9,
+    gap: 8,
     marginBottom: 8,
   },
   limitToastIconWrap: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    background: "rgba(139,92,246,0.18)",
-    border: "1px solid rgba(139,92,246,0.3)",
-    color: "#c4b5fd",
+    color: "#a78bfa",
     flexShrink: 0,
   },
   limitToastTitle: {
