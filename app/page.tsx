@@ -177,6 +177,25 @@ export default function LandingPage() {
         .feature-card { transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
         .feature-card:hover { border-color: rgba(139,92,246,0.28) !important; background: rgba(139,92,246,0.05) !important; transform: translateY(-2px); }
 
+        .faq-item { transition: border-color 0.2s ease, background-color 0.2s ease; }
+        .faq-item:hover { border-color: rgba(255,255,255,0.12) !important; }
+
+        .faq-question { transition: color 0.2s ease; }
+        .faq-question:hover .faq-q-text { color: #ffffff !important; }
+
+        .faq-answer-wrap {
+          overflow: hidden;
+          transition: grid-template-rows 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          display: grid;
+          grid-template-rows: 0fr;
+        }
+        .faq-answer-wrap.open {
+          grid-template-rows: 1fr;
+        }
+        .faq-answer-inner {
+          min-height: 0;
+        }
+
         .fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(14px); }
@@ -204,6 +223,7 @@ export default function LandingPage() {
 
         @media (prefers-reduced-motion: reduce) {
           .fade-up { animation: none !important; opacity: 1 !important; transform: none !important; }
+          .faq-answer-wrap { transition: none !important; }
         }
       `}</style>
 
@@ -261,10 +281,6 @@ export default function LandingPage() {
         </section>
 
         <section style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.eyebrow}>Why Galaxium</span>
-            <h2 style={styles.sectionTitle}>Built for how you actually build in Studio</h2>
-          </div>
           <div className="features-grid" style={styles.featuresGrid}>
             {FEATURES.map((f, i) => {
               const Icon = f.icon;
@@ -286,10 +302,6 @@ export default function LandingPage() {
         </section>
 
         <section style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.eyebrow}>How it works</span>
-            <h2 style={styles.sectionTitle}>From idea to instance in three steps</h2>
-          </div>
           <div className="steps-grid" style={styles.stepsGrid}>
             {STEPS.map((s, i) => (
               <div
@@ -306,17 +318,13 @@ export default function LandingPage() {
         </section>
 
         <section style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.eyebrow}>FAQ</span>
-            <h2 style={styles.sectionTitle}>Questions people actually ask</h2>
-          </div>
           <div style={styles.faqList}>
             {FAQS.map((item, i) => {
               const open = openFaq === i;
               return (
                 <div
                   key={item.q}
-                  className="fade-up"
+                  className="faq-item fade-up"
                   style={{ ...styles.faqItem, animationDelay: `${0.03 * i}s` }}
                 >
                   <button
@@ -326,7 +334,7 @@ export default function LandingPage() {
                     onClick={() => setOpenFaq(open ? null : i)}
                     aria-expanded={open}
                   >
-                    <span style={styles.faqQuestionText}>{item.q}</span>
+                    <span className="faq-q-text" style={styles.faqQuestionText}>{item.q}</span>
                     <span
                       style={{
                         ...styles.faqChevron,
@@ -336,7 +344,11 @@ export default function LandingPage() {
                       <ChevronIcon />
                     </span>
                   </button>
-                  {open ? <p style={styles.faqAnswer}>{item.a}</p> : null}
+                  <div className={`faq-answer-wrap${open ? " open" : ""}`}>
+                    <div className="faq-answer-inner">
+                      <p style={styles.faqAnswer}>{item.a}</p>
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -462,15 +474,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexDirection: "column",
     alignItems: "center",
   },
-  eyebrow: {
-    display: "inline-block",
-    color: "#a78bfa",
-    fontSize: 11.5,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    marginBottom: 16,
-  },
   title: {
     color: "#ffffff",
     fontSize: 42,
@@ -524,19 +527,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxWidth: 1080,
     margin: "0 auto",
     padding: "64px 24px",
-  },
-  sectionHeader: {
-    margin: "0 auto 36px",
-    maxWidth: 560,
-    textAlign: "center",
-  },
-  sectionTitle: {
-    color: "#ffffff",
-    fontSize: 27,
-    fontWeight: 700,
-    letterSpacing: "-0.015em",
-    margin: 0,
-    lineHeight: 1.25,
   },
   featuresGrid: {
     display: "grid",
@@ -605,6 +595,48 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 13,
     lineHeight: 1.6,
     margin: 0,
+  },
+  faqList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    maxWidth: 720,
+    margin: "0 auto",
+  },
+  faqItem: {
+    background: "rgba(255,255,255,0.02)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 14,
+  },
+  faqQuestion: {
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    padding: "18px 20px",
+    textAlign: "left",
+  },
+  faqQuestionText: {
+    color: "#e4e4e9",
+    fontSize: 14.5,
+    fontWeight: 600,
+    letterSpacing: "-0.01em",
+  },
+  faqChevron: {
+    flexShrink: 0,
+    color: "#9a9aa5",
+    transition: "transform 0.2s ease",
+  },
+  faqAnswer: {
+    color: "#9a9aa5",
+    fontSize: 13.5,
+    lineHeight: 1.65,
+    margin: 0,
+    padding: "0 20px 20px",
   },
   ctaSection: {
     maxWidth: 1080,
