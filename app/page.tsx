@@ -47,27 +47,6 @@ function ChevronIcon() {
   );
 }
 
-function ModelIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" />
-      <path d="M3 7l9 5 9-5" />
-      <path d="M12 12v10" />
-    </svg>
-  );
-}
-
-function ScriptFileIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z" />
-      <path d="M14 2v6h6" />
-      <path d="m10 13-2 2 2 2" />
-      <path d="m14 13 2 2-2 2" />
-    </svg>
-  );
-}
-
 
 const FEATURES = [
   {
@@ -139,6 +118,13 @@ const FAQS = [
     q: "Can I edit what it builds?",
     a: "Yes. Everything Galaxium creates is a normal Part, Script, RemoteEvent, or whatever else, sitting in Studio like anything you built by hand. Edit it, delete it, or ask Galaxium to change it in the next message.",
   },
+];
+
+const INSTANCE_PREVIEWS = [
+  { name: "Door", icon: "Model", posKey: "instancePillPos1", delay: "0s" },
+  { name: "SpeedManager", icon: "Script", posKey: "instancePillPos2", delay: "1.4s" },
+  { name: "Spawn", icon: "Part", posKey: "instancePillPos3", delay: "0.7s" },
+  { name: "ClientHandler", icon: "LocalScript", posKey: "instancePillPos4", delay: "2.1s" },
 ];
 
 export default function LandingPage() {
@@ -331,18 +317,22 @@ export default function LandingPage() {
 
       <main style={styles.main}>
         <section style={styles.hero}>
-          <div className="instance-float" style={{ ...styles.instancePill, ...styles.instancePillLeft, animationDelay: "0s" }}>
-            <span style={styles.instanceIconWrap}>
-              <ModelIcon />
-            </span>
-            <span style={styles.instancePillName}>Door</span>
-          </div>
-          <div className="instance-float" style={{ ...styles.instancePill, ...styles.instancePillRight, animationDelay: "1.4s" }}>
-            <span style={styles.instanceIconWrap}>
-              <ScriptFileIcon />
-            </span>
-            <span style={styles.instancePillName}>SpeedManager</span>
-          </div>
+          {INSTANCE_PREVIEWS.map((inst) => (
+            <div
+              key={inst.name}
+              className="instance-float"
+              style={{ ...styles.instancePill, ...styles[inst.posKey], animationDelay: inst.delay }}
+            >
+              <span style={styles.instanceIconWrap}>
+                <img
+                  src={`/assistant/StudioIcon/${inst.icon}.png`}
+                  alt={inst.icon}
+                  style={styles.instanceIconImg}
+                />
+              </span>
+              <span style={styles.instancePillName}>{inst.name}</span>
+            </div>
+          ))}
           <h1 className="fade-up" style={styles.title}>
             Describe it. Watch it build itself in Studio.
           </h1>
@@ -566,13 +556,21 @@ const styles: { [key: string]: React.CSSProperties } = {
     WebkitBackdropFilter: "blur(16px)",
     boxShadow: "0 8px 24px -8px rgba(0,0,0,0.6)",
   },
-  instancePillLeft: {
-    top: "18%",
-    left: "-4%",
+  instancePillPos1: {
+    top: "10%",
+    left: "-6%",
   },
-  instancePillRight: {
-    top: "62%",
-    right: "-6%",
+  instancePillPos2: {
+    top: "68%",
+    right: "-8%",
+  },
+  instancePillPos3: {
+    top: "-2%",
+    right: "4%",
+  },
+  instancePillPos4: {
+    top: "80%",
+    left: "6%",
   },
   instanceIconWrap: {
     display: "flex",
@@ -583,8 +581,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: 6,
     background: "rgba(139,92,246,0.14)",
     border: "1px solid rgba(139,92,246,0.24)",
-    color: "#a78bfa",
     flexShrink: 0,
+  },
+  instanceIconImg: {
+    width: 14,
+    height: 14,
+    objectFit: "contain",
   },
   instancePillName: {
     color: "#e4e4e9",
