@@ -151,16 +151,12 @@ export default function LandingPage() {
 
     card.style.transition = "transform 0.05s linear";
     card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.035, 1.035, 1.035)`;
-    card.style.setProperty("--glare-x", `${(x / rect.width) * 100}%`);
-    card.style.setProperty("--glare-y", `${(y / rect.height) * 100}%`);
-    card.style.setProperty("--glare-opacity", "1");
   }
 
   function handleCardMouseLeave(e: React.MouseEvent<HTMLDivElement>) {
     const card = e.currentTarget;
     card.style.transition = "transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)";
     card.style.transform = "perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
-    card.style.setProperty("--glare-opacity", "0");
   }
 
   return (
@@ -204,20 +200,8 @@ export default function LandingPage() {
           transform-style: preserve-3d;
           will-change: transform;
           transition: border-color 0.2s ease, background-color 0.2s ease;
-          --glare-x: 50%;
-          --glare-y: 50%;
-          --glare-opacity: 0;
         }
         .feature-card:hover { border-color: rgba(139,92,246,0.32) !important; background: rgba(139,92,246,0.05) !important; }
-        .feature-card-glare {
-          position: absolute;
-          inset: 0;
-          border-radius: 16px;
-          background: radial-gradient(circle at var(--glare-x) var(--glare-y), rgba(255,255,255,0.14), rgba(139,92,246,0.06) 35%, transparent 65%);
-          opacity: var(--glare-opacity);
-          transition: opacity 0.25s ease;
-          pointer-events: none;
-        }
         .feature-layer-icon { transform: translateZ(28px); transition: transform 0.05s linear; }
         .feature-layer-text { transform: translateZ(14px); transition: transform 0.05s linear; }
 
@@ -339,7 +323,6 @@ export default function LandingPage() {
                   onMouseMove={handleCardMouseMove}
                   onMouseLeave={handleCardMouseLeave}
                 >
-                  <div className="feature-card-glare" />
                   <div style={styles.featureIcon} className="feature-layer-icon">
                     <Icon />
                   </div>
