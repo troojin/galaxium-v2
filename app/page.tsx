@@ -139,6 +139,30 @@ export default function LandingPage() {
     };
   }, [supabase]);
 
+  function handleCardMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -9;
+    const rotateY = ((x - centerX) / centerX) * 9;
+
+    card.style.transition = "transform 0.05s linear";
+    card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.035, 1.035, 1.035)`;
+    card.style.setProperty("--glare-x", `${(x / rect.width) * 100}%`);
+    card.style.setProperty("--glare-y", `${(y / rect.height) * 100}%`);
+    card.style.setProperty("--glare-opacity", "1");
+  }
+
+  function handleCardMouseLeave(e: React.MouseEvent<HTMLDivElement>) {
+    const card = e.currentTarget;
+    card.style.transition = "transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)";
+    card.style.transform = "perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
+    card.style.setProperty("--glare-opacity", "0");
+  }
+
   return (
     <div style={styles.page}>
       <style>{`
@@ -174,8 +198,28 @@ export default function LandingPage() {
           pointer-events: none;
         }
 
-        .feature-card { transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
-        .feature-card:hover { border-color: rgba(139,92,246,0.28) !important; background: rgba(139,92,246,0.05) !important; transform: translateY(-2px); }
+        .features-grid { perspective: 1000px; }
+        .feature-card {
+          position: relative;
+          transform-style: preserve-3d;
+          will-change: transform;
+          transition: border-color 0.2s ease, background-color 0.2s ease;
+          --glare-x: 50%;
+          --glare-y: 50%;
+          --glare-opacity: 0;
+        }
+        .feature-card:hover { border-color: rgba(139,92,246,0.32) !important; background: rgba(139,92,246,0.05) !important; }
+        .feature-card-glare {
+          position: absolute;
+          inset: 0;
+          border-radius: 16px;
+          background: radial-gradient(circle at var(--glare-x) var(--glare-y), rgba(255,255,255,0.14), rgba(139,92,246,0.06) 35%, transparent 65%);
+          opacity: var(--glare-opacity);
+          transition: opacity 0.25s ease;
+          pointer-events: none;
+        }
+        .feature-layer-icon { transform: translateZ(28px); transition: transform 0.05s linear; }
+        .feature-layer-text { transform: translateZ(14px); transition: transform 0.05s linear; }
 
         .faq-item { transition: border-color 0.2s ease, background-color 0.2s ease; }
         .faq-item:hover { border-color: rgba(255,255,255,0.12) !important; }
@@ -292,12 +336,15 @@ export default function LandingPage() {
                   key={f.title}
                   className="feature-card fade-up"
                   style={{ ...styles.featureCard, animationDelay: `${0.05 * i}s` }}
+                  onMouseMove={handleCardMouseMove}
+                  onMouseLeave={handleCardMouseLeave}
                 >
-                  <div style={styles.featureIcon}>
+                  <div className="feature-card-glare" />
+                  <div style={styles.featureIcon} className="feature-layer-icon">
                     <Icon />
                   </div>
-                  <h3 style={styles.featureTitle}>{f.title}</h3>
-                  <p style={styles.featureBody}>{f.body}</p>
+                  <h3 style={styles.featureTitle} className="feature-layer-text">{f.title}</h3>
+                  <p style={styles.featureBody} className="feature-layer-text">{f.body}</p>
                 </div>
               );
             })}
@@ -364,29 +411,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section style={styles.ctaSection}>
-          <div className="glass-sheen fade-up" style={styles.ctaCard}>
-            <h2 style={styles.ctaTitle}>Start building your game with Galaxium</h2>
-            <p style={styles.ctaSubtitle}>
-              Free while we're in early access. Join the Discord for updates,
-              feature requests, and direct access to the team.
-            </p>
-            <div style={styles.ctaButtons}>
-              <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
-                Start Building
-              </Link>
-              <a
-                href="https://dsc.gg/glxm"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ghost-btn"
-                style={styles.ghostBtn}
-              >
-                Join our Discord
-              </a>
-            </div>
-          </div>
-        </section>
       </main>
 
       <footer style={styles.footer}>
@@ -659,43 +683,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1.65,
     margin: 0,
     padding: "0 20px 20px",
-  },
-  ctaSection: {
-    maxWidth: 1080,
-    margin: "0 auto",
-    padding: "20px 24px 96px",
-  },
-  ctaCard: {
-    position: "relative",
-    background: "linear-gradient(160deg, rgba(12,12,14,0.7) 0%, rgba(0,0,0,0.65) 50%, rgba(6,6,8,0.7) 100%)",
-    border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: 24,
-    padding: "48px 40px",
-    backdropFilter: "blur(40px) saturate(140%)",
-    WebkitBackdropFilter: "blur(40px) saturate(140%)",
-    boxShadow: "0 24px 60px -12px rgba(0,0,0,0.8), 0 4px 16px rgba(0,0,0,0.5)",
-    textAlign: "center",
-  },
-  ctaTitle: {
-    color: "#ffffff",
-    fontSize: 26,
-    fontWeight: 700,
-    margin: "0 0 10px",
-    letterSpacing: "-0.02em",
-  },
-  ctaSubtitle: {
-    color: "#9a9aa5",
-    fontSize: 14,
-    lineHeight: 1.6,
-    margin: "0 auto 28px",
-    maxWidth: 440,
-  },
-  ctaButtons: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    flexWrap: "wrap",
   },
   footer: {
     position: "relative",
