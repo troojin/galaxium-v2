@@ -1,14 +1,122 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 
-export default function Home() {
+function SparkIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.5 2.5M15.2 15.2l2.5 2.5M17.7 6.3l-2.5 2.5M8.8 15.2l-2.5 2.5" />
+    </svg>
+  );
+}
+
+function InsertIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 4v12M12 16l-5-5M12 16l5-5" />
+      <path d="M4 19h16" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" />
+      <path d="M9.5 12l1.8 1.8L15 10" />
+    </svg>
+  );
+}
+
+function PartGlyph() {
+  return (
+    <span style={styles.mockGlyph}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+        <rect x="4" y="4" width="16" height="16" rx="2.5" />
+      </svg>
+    </span>
+  );
+}
+
+function ScriptGlyph() {
+  return (
+    <span style={{ ...styles.mockGlyph, color: "#f2ba2a" }}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 6L3 12l5 6M16 6l5 6-5 6" />
+      </svg>
+    </span>
+  );
+}
+
+const FEATURES = [
+  {
+    icon: SparkIcon,
+    title: "Speak, don't script",
+    body: "Describe the system you want in plain English. Galaxium writes real, idiomatic Luau, not pseudocode you still have to fix.",
+  },
+  {
+    icon: InsertIcon,
+    title: "Lands itself in Studio",
+    body: "No copy-paste. The Studio plugin builds the exact instance tree automatically the moment a response finishes generating.",
+  },
+  {
+    icon: EyeIcon,
+    title: "Knows your place",
+    body: "Galaxium reads your live DataModel, so it targets the part or script you already have instead of guessing or duplicating it.",
+  },
+  {
+    icon: ShieldIcon,
+    title: "Server-safe by default",
+    body: "Client input is never trusted for currency, damage, or admin logic. Every script follows real Roblox security patterns.",
+  },
+];
+
+const STEPS = [
+  {
+    n: "1",
+    title: "Install the plugin",
+    body: "Add Galaxium AI to Roblox Studio and sign in once. It stays connected in the background.",
+  },
+  {
+    n: "2",
+    title: "Tell it what to build",
+    body: "Type what you want, right in the browser, the same way you'd explain it to another builder.",
+  },
+  {
+    n: "3",
+    title: "Watch it appear",
+    body: "Instances and scripts land in your place automatically, wired up and ready to playtest.",
+  },
+];
+
+export default function LandingPage() {
   return (
     <div style={styles.page}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+
+        .primary-btn { transition: filter 0.2s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
         .primary-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+        .primary-btn:active { transform: translateY(0) scale(0.97); }
+
+        .ghost-btn { transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease; }
+        .ghost-btn:hover { border-color: rgba(255,255,255,0.22) !important; background: rgba(255,255,255,0.04) !important; color: #ffffff !important; }
+
+        .nav-link { transition: color 0.2s ease; }
+        .nav-link:hover { color: #ffffff !important; }
+
+        .glass-sheen { position: relative; }
         .glass-sheen::before {
           content: '';
           position: absolute;
@@ -26,24 +134,215 @@ export default function Home() {
           box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.25), inset 0 -0.5px 0 rgba(255,255,255,0.03);
           pointer-events: none;
         }
+
+        .feature-card { transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+        .feature-card:hover { border-color: rgba(139,92,246,0.28) !important; background: rgba(139,92,246,0.05) !important; transform: translateY(-2px); }
+
+        .fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .mock-item-in { animation: mockItemIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        @keyframes mockItemIn {
+          from { opacity: 0; transform: translateY(6px) scale(0.96); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .glow-orb {
+          position: absolute;
+          border-radius: 50%;
+          filter: blur(90px);
+          pointer-events: none;
+        }
+
+        @media (max-width: 860px) {
+          .features-grid { grid-template-columns: 1fr !important; }
+          .steps-grid { grid-template-columns: 1fr !important; }
+          .hero-grid { grid-template-columns: 1fr !important; }
+          .hero-mock { justify-self: center !important; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .fade-up, .mock-item-in { animation: none !important; opacity: 1 !important; transform: none !important; }
+        }
       `}</style>
 
-      <div className="glass-sheen" style={styles.card}>
-        <h1 style={styles.title}>We&apos;re Almost Finished! 🚀</h1>
-        <p style={styles.subtitle}>
-          We&apos;re putting the final touches on everything. It won&apos;t be long now. Join our community for live updates and announcements.
-        </p>
+      <div className="glow-orb" style={styles.orbOne} />
+      <div className="glow-orb" style={styles.orbTwo} />
 
+      <header style={styles.nav}>
+        <div style={styles.navInner}>
+          <div style={styles.brand}>
+            <span style={styles.brandMark}>G</span>
+            <span style={styles.brandName}>Galaxium AI</span>
+          </div>
+          <nav style={styles.navLinks}>
+            <a
+              href="https://dsc.gg/glxm"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-link"
+              style={styles.navLink}
+            >
+              Discord
+            </a>
+            <Link href="/dashboard" className="primary-btn" style={styles.navCta}>
+              Start Building
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      <main style={styles.main}>
+        <section style={styles.hero}>
+          <div className="hero-grid" style={styles.heroGrid}>
+            <div>
+              <span className="fade-up" style={styles.eyebrow}>
+                AI Builder for Roblox Studio
+              </span>
+              <h1 className="fade-up" style={{ ...styles.title, animationDelay: "0.05s" }}>
+                Describe it. Watch it build itself in Studio.
+              </h1>
+              <p className="fade-up" style={{ ...styles.subtitle, animationDelay: "0.1s" }}>
+                Galaxium turns plain-English requests into real Roblox instances and
+                working Luau scripts, then drops them into your place automatically
+                while you're still typing the next message.
+              </p>
+              <div className="fade-up" style={{ ...styles.heroCtas, animationDelay: "0.15s" }}>
+                <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
+                  Start Building — it's free
+                </Link>
+                <a
+                  href="https://dsc.gg/glxm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ghost-btn"
+                  style={styles.ghostBtn}
+                >
+                  Join our Discord
+                </a>
+              </div>
+            </div>
+
+            <div className="hero-mock fade-up" style={{ ...styles.heroMockWrap, animationDelay: "0.2s" }}>
+              <div className="glass-sheen" style={styles.mockCard}>
+                <div style={styles.mockHeader}>
+                  <span style={styles.mockDot} />
+                  <span style={styles.mockHeaderText}>Connected to Studio</span>
+                </div>
+
+                <div style={styles.mockUserRow}>
+                  <div style={styles.mockUserBubble}>
+                    make it so touching the part named Death kills you
+                  </div>
+                </div>
+
+                <div style={styles.mockAssistant}>
+                  <p style={styles.mockExplanation}>
+                    Added a Touched connection on Death that zeroes the toucher's
+                    Humanoid health.
+                  </p>
+                  <div style={styles.mockCreatedLabel}>Created (2)</div>
+                  <div style={styles.mockCreatedGrid}>
+                    <span className="mock-item-in" style={{ ...styles.mockItem, animationDelay: "0.05s" }}>
+                      <PartGlyph />
+                      Death
+                    </span>
+                    <span className="mock-item-in" style={{ ...styles.mockItem, animationDelay: "0.15s" }}>
+                      <ScriptGlyph />
+                      KillOnTouch
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <span style={styles.eyebrow}>Why Galaxium</span>
+            <h2 style={styles.sectionTitle}>Built for how you actually build in Studio</h2>
+          </div>
+          <div className="features-grid" style={styles.featuresGrid}>
+            {FEATURES.map((f, i) => {
+              const Icon = f.icon;
+              return (
+                <div
+                  key={f.title}
+                  className="feature-card fade-up"
+                  style={{ ...styles.featureCard, animationDelay: `${0.05 * i}s` }}
+                >
+                  <div style={styles.featureIcon}>
+                    <Icon />
+                  </div>
+                  <h3 style={styles.featureTitle}>{f.title}</h3>
+                  <p style={styles.featureBody}>{f.body}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <span style={styles.eyebrow}>How it works</span>
+            <h2 style={styles.sectionTitle}>From idea to instance in three steps</h2>
+          </div>
+          <div className="steps-grid" style={styles.stepsGrid}>
+            {STEPS.map((s, i) => (
+              <div
+                key={s.n}
+                className="fade-up"
+                style={{ ...styles.stepCard, animationDelay: `${0.05 * i}s` }}
+              >
+                <span style={styles.stepNumber}>{s.n}</span>
+                <h3 style={styles.stepTitle}>{s.title}</h3>
+                <p style={styles.stepBody}>{s.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section style={styles.ctaSection}>
+          <div className="glass-sheen fade-up" style={styles.ctaCard}>
+            <h2 style={styles.ctaTitle}>Start building your game with Galaxium</h2>
+            <p style={styles.ctaSubtitle}>
+              Free while we're in early access. Join the Discord for updates,
+              feature requests, and direct access to the team.
+            </p>
+            <div style={styles.ctaButtons}>
+              <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
+                Start Building
+              </Link>
+              <a
+                href="https://dsc.gg/glxm"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ghost-btn"
+                style={styles.ghostBtn}
+              >
+                Join our Discord
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer style={styles.footer}>
+        <span style={styles.footerText}>© {new Date().getFullYear()} Galaxium AI</span>
         <a
           href="https://dsc.gg/glxm"
           target="_blank"
           rel="noopener noreferrer"
-          className="primary-btn"
-          style={styles.submitBtn}
+          className="nav-link"
+          style={styles.navLink}
         >
-          Join our Discord
+          Discord
         </a>
-      </div>
+      </footer>
     </div>
   );
 }
@@ -53,46 +352,135 @@ const styles: { [key: string]: React.CSSProperties } = {
     minHeight: "100vh",
     width: "100%",
     background: "#0a0a0a",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
     position: "relative",
-    overflow: "hidden",
-    padding: 24,
-  },
-  card: {
-    position: "relative",
-    zIndex: 1,
-    maxWidth: 440,
-    width: "100%",
-    background: "linear-gradient(160deg, rgba(12,12,14,0.7) 0%, rgba(0,0,0,0.65) 50%, rgba(6,6,8,0.7) 100%)",
-    border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: 24,
-    padding: "40px 32px",
-    backdropFilter: "blur(40px) saturate(140%)",
-    WebkitBackdropFilter: "blur(40px) saturate(140%)",
-    boxShadow: "0 24px 60px -12px rgba(0,0,0,0.8), 0 4px 16px rgba(0,0,0,0.5)",
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
+  },
+  orbOne: {
+    top: -140,
+    left: "8%",
+    width: 420,
+    height: 420,
+    background: "rgba(91,33,182,0.28)",
+  },
+  orbTwo: {
+    top: 260,
+    right: "4%",
+    width: 360,
+    height: 360,
+    background: "rgba(124,77,225,0.16)",
+  },
+  nav: {
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+    background: "rgba(10,10,10,0.75)",
+    backdropFilter: "blur(18px)",
+    WebkitBackdropFilter: "blur(18px)",
+  },
+  navInner: {
+    maxWidth: 1080,
+    margin: "0 auto",
+    padding: "16px 24px",
+    display: "flex",
     alignItems: "center",
-    textAlign: "center",
+    justifyContent: "space-between",
+  },
+  brand: {
+    display: "flex",
+    alignItems: "center",
+    gap: 9,
+  },
+  brandMark: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    background: "linear-gradient(160deg, rgba(124,77,225,0.9) 0%, rgba(91,33,182,0.9) 100%)",
+    border: "1px solid rgba(255,255,255,0.14)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#ffffff",
+    fontWeight: 700,
+    fontSize: 13,
+  },
+  brandName: {
+    color: "#ffffff",
+    fontWeight: 600,
+    fontSize: 14.5,
+    letterSpacing: "-0.01em",
+  },
+  navLinks: {
+    display: "flex",
+    alignItems: "center",
+    gap: 18,
+  },
+  navLink: {
+    color: "#9a9aa5",
+    fontSize: 13.5,
+    fontWeight: 500,
+    textDecoration: "none",
+  },
+  navCta: {
+    background: "linear-gradient(160deg, rgba(124,77,225,0.85) 0%, rgba(91,33,182,0.85) 100%)",
+    color: "#ffffff",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 8,
+    padding: "8px 15px",
+    fontSize: 13,
+    fontWeight: 600,
+    textDecoration: "none",
+    boxShadow: "0 2px 10px rgba(91,33,182,0.35), inset 0 0.5px 0 rgba(255,255,255,0.2)",
+  },
+  main: {
+    position: "relative",
+    zIndex: 1,
+    flex: 1,
+  },
+  hero: {
+    maxWidth: 1080,
+    margin: "0 auto",
+    padding: "88px 24px 60px",
+  },
+  heroGrid: {
+    display: "grid",
+    gridTemplateColumns: "1.05fr 0.95fr",
+    gap: 48,
+    alignItems: "center",
+  },
+  eyebrow: {
+    display: "inline-block",
+    color: "#a78bfa",
+    fontSize: 11.5,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    marginBottom: 14,
   },
   title: {
     color: "#ffffff",
-    fontSize: 26,
+    fontSize: 42,
     fontWeight: 700,
-    margin: "0 0 10px",
+    lineHeight: 1.12,
     letterSpacing: "-0.02em",
+    margin: "0 0 16px",
   },
   subtitle: {
     color: "#9a9aa5",
-    fontSize: 14,
-    lineHeight: 1.6,
-    margin: "0 0 28px",
+    fontSize: 15.5,
+    lineHeight: 1.65,
+    margin: "0 0 30px",
+    maxWidth: 460,
+  },
+  heroCtas: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    flexWrap: "wrap",
   },
   submitBtn: {
-    width: "100%",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -100,13 +488,247 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#ffffff",
     border: "1px solid rgba(255,255,255,0.12)",
     borderRadius: 12,
-    padding: "13px 0",
-    fontSize: 15,
+    padding: "13px 22px",
+    fontSize: 14.5,
     fontWeight: 600,
     textDecoration: "none",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
     boxShadow: "0 4px 16px rgba(91,33,182,0.4), inset 0 0.5px 0 rgba(255,255,255,0.2)",
-    transition: "filter 0.2s, transform 0.2s",
+  },
+  ghostBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "transparent",
+    color: "#c4c4cc",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 12,
+    padding: "13px 22px",
+    fontSize: 14.5,
+    fontWeight: 600,
+    textDecoration: "none",
+  },
+  heroMockWrap: {
+    display: "flex",
+    justifyContent: "flex-end",
+  },
+  mockCard: {
+    position: "relative",
+    width: "100%",
+    maxWidth: 420,
+    background: "linear-gradient(160deg, rgba(14,14,16,0.9) 0%, rgba(0,0,0,0.85) 50%, rgba(6,6,8,0.9) 100%)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 18,
+    padding: 18,
+    boxShadow: "0 24px 60px -12px rgba(0,0,0,0.7)",
+  },
+  mockHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 7,
+    marginBottom: 16,
+  },
+  mockDot: {
+    width: 7,
+    height: 7,
+    borderRadius: "50%",
+    background: "#4ade80",
+    flexShrink: 0,
+  },
+  mockHeaderText: {
+    color: "#7a7a85",
+    fontSize: 11.5,
+    fontWeight: 600,
+  },
+  mockUserRow: {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginBottom: 14,
+  },
+  mockUserBubble: {
+    maxWidth: "82%",
+    background: "linear-gradient(160deg, rgba(124,77,225,0.75) 0%, rgba(91,33,182,0.7) 100%)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: "14px 4px 14px 14px",
+    padding: "9px 12px",
+    color: "#ffffff",
+    fontSize: 12.5,
+    lineHeight: 1.5,
+  },
+  mockAssistant: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+  },
+  mockExplanation: {
+    margin: 0,
+    color: "#c4c4cc",
+    fontSize: 12.5,
+    lineHeight: 1.6,
+  },
+  mockCreatedLabel: {
+    color: "#7a7a85",
+    fontSize: 10,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+  mockCreatedGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  mockItem: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "6px 10px",
+    borderRadius: 8,
+    background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.09)",
+    color: "#d4d4dc",
+    fontSize: 12,
+    fontWeight: 500,
+  },
+  mockGlyph: {
+    display: "inline-flex",
+    color: "#a78bfa",
+  },
+  section: {
+    maxWidth: 1080,
+    margin: "0 auto",
+    padding: "64px 24px",
+  },
+  sectionHeader: {
+    marginBottom: 36,
+    maxWidth: 520,
+  },
+  sectionTitle: {
+    color: "#ffffff",
+    fontSize: 27,
+    fontWeight: 700,
+    letterSpacing: "-0.015em",
+    margin: 0,
+    lineHeight: 1.25,
+  },
+  featuresGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: 14,
+  },
+  featureCard: {
+    background: "rgba(255,255,255,0.02)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 16,
+    padding: "22px 20px",
+  },
+  featureIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    background: "rgba(139,92,246,0.12)",
+    border: "1px solid rgba(139,92,246,0.22)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#a78bfa",
+    marginBottom: 14,
+  },
+  featureTitle: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: 600,
+    margin: "0 0 8px",
+    letterSpacing: "-0.01em",
+  },
+  featureBody: {
+    color: "#9a9aa5",
+    fontSize: 13,
+    lineHeight: 1.6,
+    margin: 0,
+  },
+  stepsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: 14,
+  },
+  stepCard: {
+    background: "rgba(255,255,255,0.02)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 16,
+    padding: "24px 20px",
+  },
+  stepNumber: {
+    display: "inline-block",
+    color: "#a78bfa",
+    fontSize: 13,
+    fontWeight: 700,
+    fontFamily: "'Fira Mono', monospace",
+    marginBottom: 12,
+  },
+  stepTitle: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: 600,
+    margin: "0 0 8px",
+    letterSpacing: "-0.01em",
+  },
+  stepBody: {
+    color: "#9a9aa5",
+    fontSize: 13,
+    lineHeight: 1.6,
+    margin: 0,
+  },
+  ctaSection: {
+    maxWidth: 1080,
+    margin: "0 auto",
+    padding: "20px 24px 96px",
+  },
+  ctaCard: {
+    position: "relative",
+    background: "linear-gradient(160deg, rgba(12,12,14,0.7) 0%, rgba(0,0,0,0.65) 50%, rgba(6,6,8,0.7) 100%)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 24,
+    padding: "48px 40px",
+    backdropFilter: "blur(40px) saturate(140%)",
+    WebkitBackdropFilter: "blur(40px) saturate(140%)",
+    boxShadow: "0 24px 60px -12px rgba(0,0,0,0.8), 0 4px 16px rgba(0,0,0,0.5)",
+    textAlign: "center",
+  },
+  ctaTitle: {
+    color: "#ffffff",
+    fontSize: 26,
+    fontWeight: 700,
+    margin: "0 0 10px",
+    letterSpacing: "-0.02em",
+  },
+  ctaSubtitle: {
+    color: "#9a9aa5",
+    fontSize: 14,
+    lineHeight: 1.6,
+    margin: "0 auto 28px",
+    maxWidth: 440,
+  },
+  ctaButtons: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  footer: {
+    position: "relative",
+    zIndex: 1,
+    maxWidth: 1080,
+    margin: "0 auto",
+    width: "100%",
+    padding: "24px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTop: "1px solid rgba(255,255,255,0.06)",
+  },
+  footerText: {
+    color: "#5a5a64",
+    fontSize: 12.5,
   },
 };
