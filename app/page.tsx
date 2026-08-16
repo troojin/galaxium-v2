@@ -151,12 +151,16 @@ export default function LandingPage() {
 
     card.style.transition = "transform 0.05s linear";
     card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.035, 1.035, 1.035)`;
+    card.style.setProperty("--light-x", `${(x / rect.width) * 100}%`);
+    card.style.setProperty("--light-y", `${(y / rect.height) * 100}%`);
+    card.style.setProperty("--light-opacity", "1");
   }
 
   function handleCardMouseLeave(e: React.MouseEvent<HTMLDivElement>) {
     const card = e.currentTarget;
     card.style.transition = "transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)";
     card.style.transform = "perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
+    card.style.setProperty("--light-opacity", "0");
   }
 
   return (
@@ -197,11 +201,23 @@ export default function LandingPage() {
         .features-grid { perspective: 1000px; }
         .feature-card {
           position: relative;
+          overflow: hidden;
           transform-style: preserve-3d;
           will-change: transform;
           transition: border-color 0.2s ease, background-color 0.2s ease;
+          --light-x: 50%;
+          --light-y: 50%;
+          --light-opacity: 0;
         }
-        .feature-card:hover { border-color: rgba(139,92,246,0.32) !important; background: rgba(139,92,246,0.05) !important; }
+        .feature-card:hover { border-color: rgba(255,255,255,0.14) !important; }
+        .feature-card-light {
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(280px circle at var(--light-x) var(--light-y), rgba(255,255,255,0.10), transparent 60%);
+          opacity: var(--light-opacity);
+          transition: opacity 0.3s ease;
+          pointer-events: none;
+        }
         .feature-layer-icon { transform: translateZ(28px); transition: transform 0.05s linear; }
         .feature-layer-text { transform: translateZ(14px); transition: transform 0.05s linear; }
 
@@ -323,6 +339,7 @@ export default function LandingPage() {
                   onMouseMove={handleCardMouseMove}
                   onMouseLeave={handleCardMouseLeave}
                 >
+                  <div className="feature-card-light" />
                   <div style={styles.featureIcon} className="feature-layer-icon">
                     <Icon />
                   </div>
