@@ -323,13 +323,11 @@ export default function LandingPage() {
               className="instance-float"
               style={{ ...styles.instancePill, ...styles[inst.posKey], animationDelay: inst.delay }}
             >
-              <span style={styles.instanceIconWrap}>
-                <img
-                  src={`/assistant/StudioIcons/${inst.icon}.png`}
-                  alt={inst.icon}
-                  style={styles.instanceIconImg}
-                />
-              </span>
+              <img
+                src={`/assistant/StudioIcons/${inst.icon}.png`}
+                alt={inst.icon}
+                style={styles.instanceIconImg}
+              />
               <span style={styles.instancePillName}>{inst.name}</span>
             </div>
           ))}
@@ -343,7 +341,7 @@ export default function LandingPage() {
           </p>
           <div className="fade-up" style={{ ...styles.heroCtas, animationDelay: "0.1s" }}>
             <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
-              Start Building — it's free
+              Start Building
             </Link>
             <a
               href="https://dsc.gg/glxm"
@@ -572,21 +570,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     top: "80%",
     left: "6%",
   },
-  instanceIconWrap: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    background: "rgba(139,92,246,0.14)",
-    border: "1px solid rgba(139,92,246,0.24)",
-    flexShrink: 0,
-  },
   instanceIconImg: {
-    width: 14,
-    height: 14,
+    width: 16,
+    height: 16,
     objectFit: "contain",
+    flexShrink: 0,
   },
   instancePillName: {
     color: "#e4e4e9",
