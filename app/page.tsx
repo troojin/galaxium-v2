@@ -47,6 +47,27 @@ function ChevronIcon() {
   );
 }
 
+function ModelIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" />
+      <path d="M3 7l9 5 9-5" />
+      <path d="M12 12v10" />
+    </svg>
+  );
+}
+
+function ScriptFileIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z" />
+      <path d="M14 2v6h6" />
+      <path d="m10 13-2 2 2 2" />
+      <path d="m14 13 2 2-2 2" />
+    </svg>
+  );
+}
+
 
 const FEATURES = [
   {
@@ -246,6 +267,16 @@ export default function LandingPage() {
           to   { opacity: 1; transform: translateY(0); }
         }
 
+        .instance-float { animation: floatY 4.2s ease-in-out infinite; }
+        @keyframes floatY {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-16px); }
+        }
+
+        @media (max-width: 760px) {
+          .instance-float { display: none !important; }
+        }
+
         .rainbow-v2 {
           background: linear-gradient(90deg, #ff5f6d, #ffc371, #a8e063, #56ccf2, #8b5cf6, #ff5f6d);
           background-size: 300% 100%;
@@ -300,6 +331,18 @@ export default function LandingPage() {
 
       <main style={styles.main}>
         <section style={styles.hero}>
+          <div className="instance-float" style={{ ...styles.instancePill, ...styles.instancePillLeft, animationDelay: "0s" }}>
+            <span style={styles.instanceIconWrap}>
+              <ModelIcon />
+            </span>
+            <span style={styles.instancePillName}>Door</span>
+          </div>
+          <div className="instance-float" style={{ ...styles.instancePill, ...styles.instancePillRight, animationDelay: "1.4s" }}>
+            <span style={styles.instanceIconWrap}>
+              <ScriptFileIcon />
+            </span>
+            <span style={styles.instancePillName}>SpeedManager</span>
+          </div>
           <h1 className="fade-up" style={styles.title}>
             Describe it. Watch it build itself in Studio.
           </h1>
@@ -501,6 +544,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     flex: 1,
   },
   hero: {
+    position: "relative",
     maxWidth: 720,
     margin: "0 auto",
     padding: "96px 24px 80px",
@@ -508,6 +552,45 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
+  },
+  instancePill: {
+    position: "absolute",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 7,
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 10,
+    padding: "8px 12px",
+    backdropFilter: "blur(16px)",
+    WebkitBackdropFilter: "blur(16px)",
+    boxShadow: "0 8px 24px -8px rgba(0,0,0,0.6)",
+  },
+  instancePillLeft: {
+    top: "18%",
+    left: "-4%",
+  },
+  instancePillRight: {
+    top: "62%",
+    right: "-6%",
+  },
+  instanceIconWrap: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    background: "rgba(139,92,246,0.14)",
+    border: "1px solid rgba(139,92,246,0.24)",
+    color: "#a78bfa",
+    flexShrink: 0,
+  },
+  instancePillName: {
+    color: "#e4e4e9",
+    fontSize: 12.5,
+    fontWeight: 500,
+    whiteSpace: "nowrap",
   },
   title: {
     color: "#ffffff",
