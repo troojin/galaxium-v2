@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import Link from "next/link";
 
 function SparkIcon() {
@@ -38,25 +38,6 @@ function ShieldIcon() {
   );
 }
 
-function PartGlyph() {
-  return (
-    <span style={styles.mockGlyph}>
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-        <rect x="4" y="4" width="16" height="16" rx="2.5" />
-      </svg>
-    </span>
-  );
-}
-
-function ScriptGlyph() {
-  return (
-    <span style={{ ...styles.mockGlyph, color: "#f2ba2a" }}>
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M8 6L3 12l5 6M16 6l5 6-5 6" />
-      </svg>
-    </span>
-  );
-}
 
 const FEATURES = [
   {
@@ -100,6 +81,8 @@ const STEPS = [
 ];
 
 export default function LandingPage() {
+  const brandRef = useRef<HTMLDivElement>(null);
+
   return (
     <div style={styles.page}>
       <style>{`
@@ -144,120 +127,79 @@ export default function LandingPage() {
           to   { opacity: 1; transform: translateY(0); }
         }
 
-        .mock-item-in { animation: mockItemIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
-        @keyframes mockItemIn {
-          from { opacity: 0; transform: translateY(6px) scale(0.96); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
+        .rainbow-v2 {
+          background: linear-gradient(90deg, #ff5f6d, #ffc371, #a8e063, #56ccf2, #8b5cf6, #ff5f6d);
+          background-size: 300% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          color: transparent;
+          animation: rainbowShift 4s linear infinite;
         }
-
-        .glow-orb {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(90px);
-          pointer-events: none;
+        @keyframes rainbowShift {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 300% 50%; }
         }
 
         @media (max-width: 860px) {
           .features-grid { grid-template-columns: 1fr !important; }
           .steps-grid { grid-template-columns: 1fr !important; }
-          .hero-grid { grid-template-columns: 1fr !important; }
-          .hero-mock { justify-self: center !important; }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .fade-up, .mock-item-in { animation: none !important; opacity: 1 !important; transform: none !important; }
+          .fade-up { animation: none !important; opacity: 1 !important; transform: none !important; }
         }
       `}</style>
 
-      <div className="glow-orb" style={styles.orbOne} />
-      <div className="glow-orb" style={styles.orbTwo} />
+      <div style={styles.topbar}>
+        <div ref={brandRef} style={styles.brandWrap}>
+          <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIconImg} />
+          <span style={styles.brandInlineText}>
+            Galaxium <span className="rainbow-v2" style={styles.rainbowV2}>V2</span>
+          </span>
+        </div>
+        <nav style={styles.navLinks}>
+          <a
+            href="https://dsc.gg/glxm"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nav-link"
+            style={styles.navLink}
+          >
+            Discord
+          </a>
+          <Link href="/dashboard" className="primary-btn" style={styles.navCta}>
+            Start Building
+          </Link>
+        </nav>
+      </div>
 
-      <header style={styles.nav}>
-        <div style={styles.navInner}>
-          <div style={styles.brand}>
-            <span style={styles.brandMark}>G</span>
-            <span style={styles.brandName}>Galaxium AI</span>
-          </div>
-          <nav style={styles.navLinks}>
+      <main style={styles.main}>
+        <section style={styles.hero}>
+          <span className="fade-up" style={styles.eyebrow}>
+            AI Builder for Roblox Studio
+          </span>
+          <h1 className="fade-up" style={{ ...styles.title, animationDelay: "0.05s" }}>
+            Describe it. Watch it build itself in Studio.
+          </h1>
+          <p className="fade-up" style={{ ...styles.subtitle, animationDelay: "0.1s" }}>
+            Galaxium turns plain-English requests into real Roblox instances and
+            working Luau scripts, then drops them into your place automatically
+            while you're still typing the next message.
+          </p>
+          <div className="fade-up" style={{ ...styles.heroCtas, animationDelay: "0.15s" }}>
+            <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
+              Start Building — it's free
+            </Link>
             <a
               href="https://dsc.gg/glxm"
               target="_blank"
               rel="noopener noreferrer"
-              className="nav-link"
-              style={styles.navLink}
+              className="ghost-btn"
+              style={styles.ghostBtn}
             >
-              Discord
+              Join our Discord
             </a>
-            <Link href="/dashboard" className="primary-btn" style={styles.navCta}>
-              Start Building
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      <main style={styles.main}>
-        <section style={styles.hero}>
-          <div className="hero-grid" style={styles.heroGrid}>
-            <div>
-              <span className="fade-up" style={styles.eyebrow}>
-                AI Builder for Roblox Studio
-              </span>
-              <h1 className="fade-up" style={{ ...styles.title, animationDelay: "0.05s" }}>
-                Describe it. Watch it build itself in Studio.
-              </h1>
-              <p className="fade-up" style={{ ...styles.subtitle, animationDelay: "0.1s" }}>
-                Galaxium turns plain-English requests into real Roblox instances and
-                working Luau scripts, then drops them into your place automatically
-                while you're still typing the next message.
-              </p>
-              <div className="fade-up" style={{ ...styles.heroCtas, animationDelay: "0.15s" }}>
-                <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
-                  Start Building — it's free
-                </Link>
-                <a
-                  href="https://dsc.gg/glxm"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ghost-btn"
-                  style={styles.ghostBtn}
-                >
-                  Join our Discord
-                </a>
-              </div>
-            </div>
-
-            <div className="hero-mock fade-up" style={{ ...styles.heroMockWrap, animationDelay: "0.2s" }}>
-              <div className="glass-sheen" style={styles.mockCard}>
-                <div style={styles.mockHeader}>
-                  <span style={styles.mockDot} />
-                  <span style={styles.mockHeaderText}>Connected to Studio</span>
-                </div>
-
-                <div style={styles.mockUserRow}>
-                  <div style={styles.mockUserBubble}>
-                    make it so touching the part named Death kills you
-                  </div>
-                </div>
-
-                <div style={styles.mockAssistant}>
-                  <p style={styles.mockExplanation}>
-                    Added a Touched connection on Death that zeroes the toucher's
-                    Humanoid health.
-                  </p>
-                  <div style={styles.mockCreatedLabel}>Created (2)</div>
-                  <div style={styles.mockCreatedGrid}>
-                    <span className="mock-item-in" style={{ ...styles.mockItem, animationDelay: "0.05s" }}>
-                      <PartGlyph />
-                      Death
-                    </span>
-                    <span className="mock-item-in" style={{ ...styles.mockItem, animationDelay: "0.15s" }}>
-                      <ScriptGlyph />
-                      KillOnTouch
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -352,65 +294,42 @@ const styles: { [key: string]: React.CSSProperties } = {
     minHeight: "100vh",
     width: "100%",
     background: "#0a0a0a",
-    position: "relative",
-    overflow: "hidden",
     display: "flex",
     flexDirection: "column",
   },
-  orbOne: {
-    top: -140,
-    left: "8%",
-    width: 420,
-    height: 420,
-    background: "rgba(91,33,182,0.28)",
-  },
-  orbTwo: {
-    top: 260,
-    right: "4%",
-    width: 360,
-    height: 360,
-    background: "rgba(124,77,225,0.16)",
-  },
-  nav: {
+  topbar: {
     position: "sticky",
     top: 0,
     zIndex: 10,
-    borderBottom: "1px solid rgba(255,255,255,0.06)",
-    background: "rgba(10,10,10,0.75)",
-    backdropFilter: "blur(18px)",
-    WebkitBackdropFilter: "blur(18px)",
-  },
-  navInner: {
-    maxWidth: 1080,
-    margin: "0 auto",
-    padding: "16px 24px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+    padding: "14px 24px",
+    background: "rgba(10,10,10,0.75)",
+    backdropFilter: "blur(16px) saturate(140%)",
+    WebkitBackdropFilter: "blur(16px) saturate(140%)",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
   },
-  brand: {
+  brandWrap: {
+    position: "relative",
     display: "flex",
     alignItems: "center",
-    gap: 9,
+    gap: 10,
   },
-  brandMark: {
-    width: 26,
-    height: 26,
-    borderRadius: 7,
-    background: "linear-gradient(160deg, rgba(124,77,225,0.9) 0%, rgba(91,33,182,0.9) 100%)",
-    border: "1px solid rgba(255,255,255,0.14)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#ffffff",
-    fontWeight: 700,
-    fontSize: 13,
+  brandIconImg: {
+    width: 22,
+    height: 22,
+    objectFit: "contain",
   },
-  brandName: {
+  brandInlineText: {
     color: "#ffffff",
+    fontSize: 14,
     fontWeight: 600,
-    fontSize: 14.5,
     letterSpacing: "-0.01em",
+    whiteSpace: "nowrap",
+  },
+  rainbowV2: {
+    fontWeight: 800,
   },
   navLinks: {
     display: "flex",
@@ -440,14 +359,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     flex: 1,
   },
   hero: {
-    maxWidth: 1080,
+    maxWidth: 720,
     margin: "0 auto",
-    padding: "88px 24px 60px",
-  },
-  heroGrid: {
-    display: "grid",
-    gridTemplateColumns: "1.05fr 0.95fr",
-    gap: 48,
+    padding: "96px 24px 80px",
+    textAlign: "center",
+    display: "flex",
+    flexDirection: "column",
     alignItems: "center",
   },
   eyebrow: {
@@ -457,7 +374,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.08em",
-    marginBottom: 14,
+    marginBottom: 16,
   },
   title: {
     color: "#ffffff",
@@ -471,12 +388,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#9a9aa5",
     fontSize: 15.5,
     lineHeight: 1.65,
-    margin: "0 0 30px",
-    maxWidth: 460,
+    margin: "0 auto 30px",
+    maxWidth: 480,
   },
   heroCtas: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
     gap: 12,
     flexWrap: "wrap",
   },
@@ -506,92 +424,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 14.5,
     fontWeight: 600,
     textDecoration: "none",
-  },
-  heroMockWrap: {
-    display: "flex",
-    justifyContent: "flex-end",
-  },
-  mockCard: {
-    position: "relative",
-    width: "100%",
-    maxWidth: 420,
-    background: "linear-gradient(160deg, rgba(14,14,16,0.9) 0%, rgba(0,0,0,0.85) 50%, rgba(6,6,8,0.9) 100%)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 18,
-    padding: 18,
-    boxShadow: "0 24px 60px -12px rgba(0,0,0,0.7)",
-  },
-  mockHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: 7,
-    marginBottom: 16,
-  },
-  mockDot: {
-    width: 7,
-    height: 7,
-    borderRadius: "50%",
-    background: "#4ade80",
-    flexShrink: 0,
-  },
-  mockHeaderText: {
-    color: "#7a7a85",
-    fontSize: 11.5,
-    fontWeight: 600,
-  },
-  mockUserRow: {
-    display: "flex",
-    justifyContent: "flex-end",
-    marginBottom: 14,
-  },
-  mockUserBubble: {
-    maxWidth: "82%",
-    background: "linear-gradient(160deg, rgba(124,77,225,0.75) 0%, rgba(91,33,182,0.7) 100%)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: "14px 4px 14px 14px",
-    padding: "9px 12px",
-    color: "#ffffff",
-    fontSize: 12.5,
-    lineHeight: 1.5,
-  },
-  mockAssistant: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
-  },
-  mockExplanation: {
-    margin: 0,
-    color: "#c4c4cc",
-    fontSize: 12.5,
-    lineHeight: 1.6,
-  },
-  mockCreatedLabel: {
-    color: "#7a7a85",
-    fontSize: 10,
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-  },
-  mockCreatedGrid: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 7,
-  },
-  mockItem: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "6px 10px",
-    borderRadius: 8,
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.09)",
-    color: "#d4d4dc",
-    fontSize: 12,
-    fontWeight: 500,
-  },
-  mockGlyph: {
-    display: "inline-flex",
-    color: "#a78bfa",
   },
   section: {
     maxWidth: 1080,
