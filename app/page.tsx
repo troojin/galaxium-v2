@@ -281,6 +281,9 @@ export default function LandingPage() {
         </section>
 
         <section style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>Built for how you actually build in Studio</h2>
+          </div>
           <div className="features-grid" style={styles.featuresGrid}>
             {FEATURES.map((f, i) => {
               const Icon = f.icon;
@@ -302,6 +305,9 @@ export default function LandingPage() {
         </section>
 
         <section style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>From idea to instance in three steps</h2>
+          </div>
           <div className="steps-grid" style={styles.stepsGrid}>
             {STEPS.map((s, i) => (
               <div
@@ -318,6 +324,9 @@ export default function LandingPage() {
         </section>
 
         <section style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>Questions people usually ask</h2>
+          </div>
           <div style={styles.faqList}>
             {FAQS.map((item, i) => {
               const open = openFaq === i;
@@ -527,6 +536,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxWidth: 1080,
     margin: "0 auto",
     padding: "64px 24px",
+  },
+  sectionHeader: {
+    margin: "0 auto 36px",
+    maxWidth: 560,
+    textAlign: "center",
+  },
+  sectionTitle: {
+    color: "#ffffff",
+    fontSize: 27,
+    fontWeight: 700,
+    letterSpacing: "-0.015em",
+    margin: 0,
+    lineHeight: 1.25,
   },
   featuresGrid: {
     display: "grid",
