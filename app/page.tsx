@@ -39,6 +39,14 @@ function ShieldIcon() {
   );
 }
 
+function ChevronIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
 
 const FEATURES = [
   {
@@ -81,10 +89,42 @@ const STEPS = [
   },
 ];
 
+const FAQS = [
+  {
+    q: "What model does Galaxium use?",
+    a: "Galaxium runs on OpenAI GPT-5.6 Sol, their flagship model and, frankly, the most agentic thing on the market right now. It doesn't just autocomplete Luau, it reasons through the whole system, plans the instance tree, and ships working code like it's got something to prove. We could've picked something cheaper. We didn't. 🚀",
+  },
+  {
+    q: "Is Galaxium free?",
+    a: "Yes, free while we're in early access. No credit card, no trial countdown. That may change down the line, but anyone building with us now keeps early-access pricing.",
+  },
+  {
+    q: "Do I need to know how to script to use it?",
+    a: "No. Describe what you want in plain English and Galaxium writes the Luau. That said, if you do know Roblox scripting, you'll notice it follows real patterns, not toy examples, so it's just as useful once you're editing by hand too.",
+  },
+  {
+    q: "Will it mess up my existing place?",
+    a: "Galaxium reads your place's live DataModel before generating anything, so it knows what already exists. If you reference something you already built by name, it targets that instead of creating a duplicate.",
+  },
+  {
+    q: "How does it get things into Studio?",
+    a: "The Galaxium Studio plugin stays connected while you chat in the browser. The moment a response finishes generating, the plugin builds the instances and drops the scripts in automatically, no copy-paste required.",
+  },
+  {
+    q: "Is the generated code safe to ship?",
+    a: "Every script follows real Roblox security practices by default, server-authoritative logic for currency, damage, and admin actions, with the client never trusted for anything that matters. You should still read what it writes, same as any code.",
+  },
+  {
+    q: "Can I edit what it builds?",
+    a: "Yes. Everything Galaxium creates is a normal Part, Script, RemoteEvent, or whatever else, sitting in Studio like anything you built by hand. Edit it, delete it, or ask Galaxium to change it in the next message.",
+  },
+];
+
 export default function LandingPage() {
   const brandRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -262,6 +302,44 @@ export default function LandingPage() {
                 <p style={styles.stepBody}>{s.body}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <span style={styles.eyebrow}>FAQ</span>
+            <h2 style={styles.sectionTitle}>Questions people actually ask</h2>
+          </div>
+          <div style={styles.faqList}>
+            {FAQS.map((item, i) => {
+              const open = openFaq === i;
+              return (
+                <div
+                  key={item.q}
+                  className="fade-up"
+                  style={{ ...styles.faqItem, animationDelay: `${0.03 * i}s` }}
+                >
+                  <button
+                    type="button"
+                    className="faq-question"
+                    style={styles.faqQuestion}
+                    onClick={() => setOpenFaq(open ? null : i)}
+                    aria-expanded={open}
+                  >
+                    <span style={styles.faqQuestionText}>{item.q}</span>
+                    <span
+                      style={{
+                        ...styles.faqChevron,
+                        transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                      }}
+                    >
+                      <ChevronIcon />
+                    </span>
+                  </button>
+                  {open ? <p style={styles.faqAnswer}>{item.a}</p> : null}
+                </div>
+              );
+            })}
           </div>
         </section>
 
