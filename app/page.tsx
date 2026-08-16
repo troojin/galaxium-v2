@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 function SparkIcon() {
   return (
@@ -82,6 +83,21 @@ const STEPS = [
 
 export default function LandingPage() {
   const brandRef = useRef<HTMLDivElement>(null);
+  const supabase = createClient();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function checkAuth() {
+      const { data } = await supabase.auth.getSession();
+      if (!isMounted) return;
+      setIsLoggedIn(!!data.session);
+    }
+    checkAuth();
+    return () => {
+      isMounted = false;
+    };
+  }, [supabase]);
 
   return (
     <div style={styles.page}>
@@ -168,26 +184,27 @@ export default function LandingPage() {
           >
             Discord
           </a>
-          <Link href="/dashboard" className="primary-btn" style={styles.navCta}>
-            Start Building
+          <Link
+            href={isLoggedIn ? "/dashboard" : "/auth/login"}
+            className="primary-btn"
+            style={styles.navCta}
+          >
+            {isLoggedIn ? "Open Dashboard" : "Log in"}
           </Link>
         </nav>
       </div>
 
       <main style={styles.main}>
         <section style={styles.hero}>
-          <span className="fade-up" style={styles.eyebrow}>
-            AI Builder for Roblox Studio
-          </span>
-          <h1 className="fade-up" style={{ ...styles.title, animationDelay: "0.05s" }}>
+          <h1 className="fade-up" style={styles.title}>
             Describe it. Watch it build itself in Studio.
           </h1>
-          <p className="fade-up" style={{ ...styles.subtitle, animationDelay: "0.1s" }}>
+          <p className="fade-up" style={{ ...styles.subtitle, animationDelay: "0.05s" }}>
             Galaxium turns plain-English requests into real Roblox instances and
             working Luau scripts, then drops them into your place automatically
             while you're still typing the next message.
           </p>
-          <div className="fade-up" style={{ ...styles.heroCtas, animationDelay: "0.15s" }}>
+          <div className="fade-up" style={{ ...styles.heroCtas, animationDelay: "0.1s" }}>
             <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
               Start Building — it's free
             </Link>
@@ -431,8 +448,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: "64px 24px",
   },
   sectionHeader: {
-    marginBottom: 36,
-    maxWidth: 520,
+    margin: "0 auto 36px",
+    maxWidth: 560,
+    textAlign: "center",
   },
   sectionTitle: {
     color: "#ffffff",
