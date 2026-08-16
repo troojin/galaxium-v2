@@ -325,7 +325,7 @@ export default function LandingPage() {
             >
               <span style={styles.instanceIconWrap}>
                 <img
-                  src={`/assistant/StudioIcon/${inst.icon}.png`}
+                  src={`/assistant/StudioIcons/${inst.icon}.png`}
                   alt={inst.icon}
                   style={styles.instanceIconImg}
                 />
