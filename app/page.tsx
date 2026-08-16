@@ -198,7 +198,7 @@ export default function LandingPage() {
           pointer-events: none;
         }
 
-        .features-grid { perspective: 1000px; }
+        .features-grid, .steps-grid { perspective: 1000px; }
         .feature-card {
           position: relative;
           overflow: hidden;
@@ -359,12 +359,14 @@ export default function LandingPage() {
             {STEPS.map((s, i) => (
               <div
                 key={s.n}
-                className="fade-up"
+                className="feature-card fade-up"
                 style={{ ...styles.stepCard, animationDelay: `${0.05 * i}s` }}
+                onMouseMove={handleCardMouseMove}
+                onMouseLeave={handleCardMouseLeave}
               >
-                <span style={styles.stepNumber}>{s.n}</span>
-                <h3 style={styles.stepTitle}>{s.title}</h3>
-                <p style={styles.stepBody}>{s.body}</p>
+                <div className="feature-card-light" />
+                <h3 style={styles.stepTitle} className="feature-layer-text">{s.title}</h3>
+                <p style={styles.stepBody} className="feature-layer-text">{s.body}</p>
               </div>
             ))}
           </div>
@@ -620,14 +622,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: "1px solid rgba(255,255,255,0.07)",
     borderRadius: 16,
     padding: "24px 20px",
-  },
-  stepNumber: {
-    display: "inline-block",
-    color: "#a78bfa",
-    fontSize: 13,
-    fontWeight: 700,
-    fontFamily: "'Fira Mono', monospace",
-    marginBottom: 12,
   },
   stepTitle: {
     color: "#ffffff",
