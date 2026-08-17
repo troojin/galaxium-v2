@@ -2,6 +2,7 @@ local HttpService = game:GetService("HttpService")
 
 local API_BASE = "https://galaxium.lol/api/plugin"
 local SETTING_KEY = "galaxiumApiKey"
+local APPLIED_INSERT_IDS_SETTING = "galaxiumAppliedInsertIds"
 
 local DEBUG = true
 
@@ -255,6 +256,7 @@ local SignedIn = Instance.new("Frame")
 local UIListLayout_3 = Instance.new("UIListLayout")
 local connectedLabel = Instance.new("TextLabel")
 local projectLabel = Instance.new("TextLabel")
+local refreshButton = Instance.new("TextButton")
 local signOutButton = Instance.new("TextButton")
 local UICorner_3 = Instance.new("UICorner")
 local signOutButtonStroke = Instance.new("UIStroke")
@@ -362,7 +364,7 @@ SignedIn.Name = "SignedIn"
 SignedIn.Parent = Root
 SignedIn.BackgroundTransparency = 1.000
 SignedIn.LayoutOrder = 2
-SignedIn.Size = UDim2.new(1, 0, 0, 118)
+SignedIn.Size = UDim2.new(1, 0, 0, 148)
 SignedIn.Visible = false
 
 UIListLayout_3.Parent = SignedIn
@@ -389,10 +391,20 @@ projectLabel.TextColor3 = Color3.fromRGB(154, 154, 165)
 projectLabel.TextSize = 12.000
 projectLabel.TextTruncate = Enum.TextTruncate.AtEnd
 
+refreshButton.Name = "refreshButton"
+refreshButton.Parent = SignedIn
+refreshButton.BackgroundTransparency = 1
+refreshButton.LayoutOrder = 3
+refreshButton.Size = UDim2.new(1, 0, 0, 24)
+refreshButton.Font = Enum.Font.GothamMedium
+refreshButton.Text = "Refresh project"
+refreshButton.TextColor3 = Color3.fromRGB(167, 139, 250)
+refreshButton.TextSize = 12.000
+
 signOutButton.Parent = SignedIn
 signOutButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 signOutButton.BackgroundTransparency = 1
-signOutButton.LayoutOrder = 3
+signOutButton.LayoutOrder = 4
 signOutButton.Size = UDim2.new(1, 0, 0, 30)
 signOutButton.Font = Enum.Font.Gotham
 signOutButton.Text = "Sign out"
@@ -579,10 +591,21 @@ local function applyProperty(instance, key, rawValue)
 	end
 end
 
+-- IMPORTANT: for any node that is nested inside another node in the SAME payload
+-- (i.e. it arrived via a parent's "children" array), the tree structure it was sent
+-- in is always the source of truth for where it should be parented. We deliberately
+-- ignore that node's own "parent" field in that case, because the AI sometimes stamps
+-- every node (not just top-level roots) with an absolute parent path, which would
+-- otherwise silently override the nesting and pull things like a Frame out of its
+-- ScreenGui and attach it to the ScreenGui's own parent instead.
+-- The explicit "parent" field is only honored for a payload's root-level instances,
+-- where there is no structural parent to fall back on (e.g. "StarterGui").
 local function walkAndCreate(node, structuralParentPath, flatList, instancesByPath)
-	local parentPath = node.parent
-	if not parentPath or parentPath == "" then
+	local parentPath
+	if structuralParentPath then
 		parentPath = structuralParentPath
+	else
+		parentPath = node.parent
 	end
 
 	local ownPath
@@ -673,6 +696,51 @@ local function applyInsert(payload)
 	end
 end
 
+-- Local dedupe for applied inserts. The server is the source of truth for what's
+-- "pending", but if an /insert/ack call is slow, drops, or the server doesn't mark
+-- a row done fast enough, the same insert can come back on a later poll. Rather than
+-- trusting the server to never re-serve an id, we remember every id we've already
+-- built in Studio and skip re-applying it — we still retry the ack so the server can
+-- eventually clear it, but we never build the objects twice.
+local appliedInsertIds = {}
+local appliedInsertOrder = {}
+local MAX_APPLIED_INSERT_IDS = 200
+
+local function loadAppliedInsertIds()
+	local ok, stored = pcall(function()
+		return plugin:GetSetting(APPLIED_INSERT_IDS_SETTING)
+	end)
+	if ok and type(stored) == "table" then
+		for _, id in ipairs(stored) do
+			if not appliedInsertIds[id] then
+				appliedInsertIds[id] = true
+				table.insert(appliedInsertOrder, id)
+			end
+		end
+	end
+end
+
+local function rememberAppliedInsertId(id)
+	if appliedInsertIds[id] then
+		return
+	end
+
+	appliedInsertIds[id] = true
+	table.insert(appliedInsertOrder, id)
+
+	while #appliedInsertOrder > MAX_APPLIED_INSERT_IDS do
+		local oldest = table.remove(appliedInsertOrder, 1)
+		appliedInsertIds[oldest] = nil
+	end
+
+	local ok, err = pcall(function()
+		plugin:SetSetting(APPLIED_INSERT_IDS_SETTING, appliedInsertOrder)
+	end)
+	if not ok then
+		warn("failed to persist applied insert ids: " .. tostring(err))
+	end
+end
+
 local insertPollRunning = false
 
 local function startInsertPolling()
@@ -686,15 +754,24 @@ local function startInsertPolling()
 				local data, err = request("POST", "/insert/pending", { projectId = currentProjectId }, apiKey)
 				if data and data.inserts then
 					for _, item in ipairs(data.inserts) do
-						local applyOk, applyErr = pcall(applyInsert, item.payload)
-						if applyOk then
-							log("applied insert " .. tostring(item.id))
+						if appliedInsertIds[item.id] then
+							log("insert " .. tostring(item.id) .. " already applied locally, re-acking only")
 							local _, ackErr = request("POST", "/insert/ack", { insertId = item.id }, apiKey)
 							if ackErr then
-								warn("failed to ack insert " .. tostring(item.id) .. ": " .. tostring(ackErr))
+								warn("failed to re-ack already-applied insert " .. tostring(item.id) .. ": " .. tostring(ackErr))
 							end
 						else
-							warn("failed to apply insert " .. tostring(item.id) .. ": " .. tostring(applyErr))
+							local applyOk, applyErr = pcall(applyInsert, item.payload)
+							if applyOk then
+								log("applied insert " .. tostring(item.id))
+								rememberAppliedInsertId(item.id)
+								local _, ackErr = request("POST", "/insert/ack", { insertId = item.id }, apiKey)
+								if ackErr then
+									warn("failed to ack insert " .. tostring(item.id) .. ": " .. tostring(ackErr))
+								end
+							else
+								warn("failed to apply insert " .. tostring(item.id) .. ": " .. tostring(applyErr))
+							end
 						end
 					end
 				elseif err then
@@ -712,11 +789,16 @@ end
 
 local function loadRecentProject(apiKey)
 	log("fetching most recent active project")
+	refreshButton.Active = false
+	local previousText = projectLabel.Text
+	projectLabel.Text = "Refreshing..."
+
 	local data, err = request("GET", "/projects/recent", nil, apiKey)
+	refreshButton.Active = true
 
 	if not data then
 		warn("failed to fetch recent project: " .. tostring(err))
-		projectLabel.Text = ""
+		projectLabel.Text = previousText ~= "" and previousText or ""
 		return
 	end
 
@@ -729,11 +811,15 @@ local function loadRecentProject(apiKey)
 	log("most recent project: " .. tostring(data.project.name) .. " (" .. tostring(data.project.id) .. ")")
 	projectLabel.Text = data.project.name
 
+	local isNewProject = currentProjectId ~= data.project.id
 	currentProjectId = data.project.id
 	startHeartbeat()
 	startInsertPolling()
 	startContextSync()
 
+	if isNewProject then
+		log("active project changed, clearing local applied-insert dedupe cache")
+	end
 end
 
 local function pollAuth(sessionId)
@@ -833,6 +919,14 @@ end
 
 loginButton.MouseButton1Click:Connect(beginSignIn)
 signOutButton.MouseButton1Click:Connect(signOut)
+refreshButton.MouseButton1Click:Connect(function()
+	local apiKey = plugin:GetSetting(SETTING_KEY)
+	if apiKey then
+		loadRecentProject(apiKey)
+	end
+end)
+
+loadAppliedInsertIds()
 
 local existingKey = plugin:GetSetting(SETTING_KEY)
 if existingKey then
