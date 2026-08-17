@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { TestimonialsSection } from "@/components/testimonials-section";
 
 function SparkIcon() {
   return (
@@ -118,6 +117,45 @@ const FAQS = [
   {
     q: "Can I edit what it builds?",
     a: "Yes. Everything Galaxium creates is a normal Part, Script, RemoteEvent, or whatever else, sitting in Studio like anything you built by hand. Edit it, delete it, or ask Galaxium to change it in the next message.",
+  },
+];
+
+const TESTIMONIALS = [
+  {
+    robloxUsername: "synara_web",
+    displayName: "chris",
+    quote:
+      "Started using Galaxium a couple days ago and it's already changed how I build. Instead of manually placing parts I just describe what I want and it's there.",
+  },
+  {
+    robloxUsername: "lolkostoy",
+    displayName: "wolfie",
+    quote:
+      "I used to spend hours setting up basic scripts. Galaxium gets me from idea to working prototype in minutes.",
+  },
+  {
+    robloxUsername: "Jonas_vilkas",
+    displayName: "JL",
+    quote:
+      "The instance tree generation is wild, full ScreenGuis, scripts, everything nested correctly. Feels like pair programming with someone who knows Studio inside out.",
+  },
+  {
+    robloxUsername: "R1GMAST3R",
+    displayName: "r1g",
+    quote:
+      "Been solo deving for a year and Galaxium is the closest thing to having a teammate. My workflow got so much faster.",
+  },
+  {
+    robloxUsername: "Kotik_wahye",
+    displayName: "zoinchk",
+    quote:
+      "Didn't expect an AI tool to actually understand Roblox's instance hierarchy this well. Genuinely useful, not just a gimmick.",
+  },
+  {
+    robloxUsername: "Egor_Oxi",
+    displayName: "egorchik",
+    quote:
+      "Galaxium turned my weekend project from 'maybe someday' into something I actually shipped in two days.",
   },
 ];
 
@@ -264,6 +302,7 @@ export default function LandingPage() {
         @media (max-width: 860px) {
           .features-grid { grid-template-columns: 1fr !important; }
           .steps-grid { grid-template-columns: 1fr !important; }
+          .testimonials-grid { grid-template-columns: 1fr !important; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -414,7 +453,38 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <TestimonialsSection />
+        <section style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>What builders are saying</h2>
+          </div>
+          <div className="testimonials-grid" style={styles.testimonialsGrid}>
+            {TESTIMONIALS.map((t, i) => (
+              <div
+                key={t.robloxUsername}
+                className="feature-card fade-up"
+                style={{ ...styles.testimonialCard, animationDelay: `${0.05 * i}s` }}
+                onMouseMove={handleCardMouseMove}
+                onMouseLeave={handleCardMouseLeave}
+              >
+                <div className="feature-card-light" />
+                <p style={styles.testimonialQuote} className="feature-layer-text">
+                  "{t.quote}"
+                </p>
+                <div style={styles.testimonialAuthor} className="feature-layer-text">
+                  <img
+                    src={`/api/roblox/avatar?username=${encodeURIComponent(t.robloxUsername)}`}
+                    alt={t.displayName}
+                    style={styles.testimonialAvatar}
+                  />
+                  <div>
+                    <div style={styles.testimonialName}>@{t.displayName}</div>
+                    <div style={styles.testimonialHandle}>{t.robloxUsername} on Roblox</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
       </main>
 
@@ -639,6 +709,49 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 13,
     lineHeight: 1.6,
     margin: 0,
+  },
+  testimonialsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: 14,
+  },
+  testimonialCard: {
+    background: "rgba(255,255,255,0.02)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 16,
+    padding: "22px 20px",
+    display: "flex",
+    flexDirection: "column",
+  },
+  testimonialQuote: {
+    color: "#c4c4cc",
+    fontSize: 13.5,
+    lineHeight: 1.6,
+    margin: "0 0 18px",
+  },
+  testimonialAuthor: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    marginTop: "auto",
+  },
+  testimonialAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: "50%",
+    objectFit: "cover",
+    background: "rgba(255,255,255,0.05)",
+    flexShrink: 0,
+  },
+  testimonialName: {
+    color: "#ffffff",
+    fontSize: 13.5,
+    fontWeight: 600,
+  },
+  testimonialHandle: {
+    color: "#6b6b78",
+    fontSize: 12,
+    marginTop: 1,
   },
   faqList: {
     display: "flex",
