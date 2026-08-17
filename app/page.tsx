@@ -62,11 +62,74 @@ const STEPS = landingData.steps;
 const FAQS = landingData.faqs;
 const TESTIMONIALS = testimonialsData;
 
+const MARQUEE_SPEED = 42; // px/sec — shared by both rows so they always match
+const MARQUEE_HOVER_MULTIPLIER = 0.28;
+
+function useMarquee(direction: 1 | -1, speed = MARQUEE_SPEED) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef(0);
+  const speedMultRef = useRef(1);
+  const targetMultRef = useRef(1);
+  const rafRef = useRef<number | undefined>(undefined);
+  const lastTimeRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    function frame(time: number) {
+      if (lastTimeRef.current == null) lastTimeRef.current = time;
+      const dt = Math.min((time - lastTimeRef.current) / 1000, 0.1);
+      lastTimeRef.current = time;
+
+      // ease the current speed toward its target every frame — this is the tween,
+      // so slowing down on hover glides instead of snapping to a new rate
+      const ease = 1 - Math.pow(0.0005, dt);
+      speedMultRef.current += (targetMultRef.current - speedMultRef.current) * ease;
+
+      const track = trackRef.current;
+      if (track) {
+        const halfWidth = track.scrollWidth / 2;
+        offsetRef.current += direction * speed * speedMultRef.current * dt;
+
+        if (halfWidth > 0) {
+          offsetRef.current = ((offsetRef.current % halfWidth) + halfWidth) % halfWidth;
+        }
+
+        track.style.transform = `translateX(${-offsetRef.current}px)`;
+      }
+
+      rafRef.current = requestAnimationFrame(frame);
+    }
+
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!prefersReducedMotion) {
+      rafRef.current = requestAnimationFrame(frame);
+    }
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [direction, speed]);
+
+  return {
+    trackRef,
+    onMouseEnter: () => {
+      targetMultRef.current = MARQUEE_HOVER_MULTIPLIER;
+    },
+    onMouseLeave: () => {
+      targetMultRef.current = 1;
+    },
+  };
+}
+
 export default function LandingPage() {
   const brandRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const marqueeRowOne = useMarquee(1);
+  const marqueeRowTwo = useMarquee(-1);
 
   useEffect(() => {
     let isMounted = true;
