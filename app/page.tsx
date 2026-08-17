@@ -3,6 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import landingData from "@/data/landing.json";
+import testimonialsData from "@/data/testimonials.json";
 
 function SparkIcon() {
   return (
@@ -48,116 +50,17 @@ function ChevronIcon() {
 }
 
 
-const FEATURES = [
-  {
-    icon: SparkIcon,
-    title: "Speak, don't script",
-    body: "Describe the system you want in plain English. Galaxium writes real, idiomatic Luau, not pseudocode you still have to fix.",
-  },
-  {
-    icon: InsertIcon,
-    title: "Lands itself in Studio",
-    body: "No copy-paste. The Studio plugin builds the exact instance tree automatically the moment a response finishes generating.",
-  },
-  {
-    icon: EyeIcon,
-    title: "Knows your place",
-    body: "Galaxium reads your live DataModel, so it targets the part or script you already have instead of guessing or duplicating it.",
-  },
-  {
-    icon: ShieldIcon,
-    title: "Server-safe by default",
-    body: "Client input is never trusted for currency, damage, or admin logic. Every script follows real Roblox security patterns.",
-  },
-];
+const ICONS: { [key: string]: () => React.JSX.Element } = {
+  spark: SparkIcon,
+  insert: InsertIcon,
+  eye: EyeIcon,
+  shield: ShieldIcon,
+};
 
-const STEPS = [
-  {
-    n: "1",
-    title: "Install the plugin",
-    body: "Add Galaxium AI to Roblox Studio and sign in once. It stays connected in the background.",
-  },
-  {
-    n: "2",
-    title: "Tell it what to build",
-    body: "Type what you want, right in the browser, the same way you'd explain it to another builder.",
-  },
-  {
-    n: "3",
-    title: "Watch it appear",
-    body: "Instances and scripts land in your place automatically, wired up and ready to playtest.",
-  },
-];
-
-const FAQS = [
-  {
-    q: "What model does Galaxium use?",
-    a: "Galaxium runs on OpenAI GPT-5.6 Sol, their flagship model and, frankly, the most agentic thing on the market right now. It doesn't just autocomplete Luau, it reasons through the whole system, plans the instance tree, and ships working code like it's got something to prove. We could've picked something cheaper. We didn't. 🚀",
-  },
-  {
-    q: "Is Galaxium free?",
-    a: "Yes, free while we're in early access. No credit card, no trial countdown. That may change down the line, but anyone building with us now keeps early-access pricing.",
-  },
-  {
-    q: "Do I need to know how to script to use it?",
-    a: "No. Describe what you want in plain English and Galaxium writes the Luau. That said, if you do know Roblox scripting, you'll notice it follows real patterns, not toy examples, so it's just as useful once you're editing by hand too.",
-  },
-  {
-    q: "Will it mess up my existing place?",
-    a: "Galaxium reads your place's live DataModel before generating anything, so it knows what already exists. If you reference something you already built by name, it targets that instead of creating a duplicate.",
-  },
-  {
-    q: "How does it get things into Studio?",
-    a: "The Galaxium Studio plugin stays connected while you chat in the browser. The moment a response finishes generating, the plugin builds the instances and drops the scripts in automatically, no copy-paste required.",
-  },
-  {
-    q: "Is the generated code safe to ship?",
-    a: "Every script follows real Roblox security practices by default, server-authoritative logic for currency, damage, and admin actions, with the client never trusted for anything that matters. You should still read what it writes, same as any code.",
-  },
-  {
-    q: "Can I edit what it builds?",
-    a: "Yes. Everything Galaxium creates is a normal Part, Script, RemoteEvent, or whatever else, sitting in Studio like anything you built by hand. Edit it, delete it, or ask Galaxium to change it in the next message.",
-  },
-];
-
-const TESTIMONIALS = [
-  {
-    robloxUsername: "synara_web",
-    displayName: "chris",
-    quote:
-      "Started using Galaxium a couple days ago and it's already changed how I build. Instead of manually placing parts I just describe what I want and it's there.",
-  },
-  {
-    robloxUsername: "lolkostoy",
-    displayName: "wolfie",
-    quote:
-      "I used to spend hours setting up basic scripts. Galaxium gets me from idea to working prototype in minutes.",
-  },
-  {
-    robloxUsername: "Jonas_vilkas",
-    displayName: "JL",
-    quote:
-      "The instance tree generation is wild, full ScreenGuis, scripts, everything nested correctly. Feels like pair programming with someone who knows Studio inside out.",
-  },
-  {
-    robloxUsername: "R1GMAST3R",
-    displayName: "r1g",
-    quote:
-      "Been solo deving for a year and Galaxium is the closest thing to having a teammate. My workflow got so much faster.",
-  },
-  {
-    robloxUsername: "Kotik_wahye",
-    displayName: "zoinchk",
-    quote:
-      "Didn't expect an AI tool to actually understand Roblox's instance hierarchy this well. Genuinely useful, not just a gimmick.",
-  },
-  {
-    robloxUsername: "Egor_Oxi",
-    displayName: "egorchik",
-    quote:
-      "Galaxium turned my weekend project from 'maybe someday' into something I actually shipped in two days.",
-  },
-];
+const FEATURES = landingData.features;
+const STEPS = landingData.steps;
+const FAQS = landingData.faqs;
+const TESTIMONIALS = testimonialsData;
 
 export default function LandingPage() {
   const brandRef = useRef<HTMLDivElement>(null);
@@ -313,14 +216,18 @@ export default function LandingPage() {
           display: flex;
           width: max-content;
           gap: 14px;
-          animation: testimonialsScroll 34s linear infinite;
+          --marquee-duration: 34s;
+          animation: testimonialsScroll var(--marquee-duration) linear infinite;
         }
         .testimonials-marquee:hover .testimonials-track {
-          animation-play-state: paused;
+          animation-duration: calc(var(--marquee-duration) * 3);
         }
         @keyframes testimonialsScroll {
           from { transform: translateX(0); }
           to { transform: translateX(-50%); }
+        }
+        .testimonials-track-reverse {
+          animation-direction: reverse;
         }
         .testimonial-card {
           transition: border-color 0.2s ease, background-color 0.2s ease;
@@ -396,7 +303,7 @@ export default function LandingPage() {
           </div>
           <div className="features-grid" style={styles.featuresGrid}>
             {FEATURES.map((f, i) => {
-              const Icon = f.icon;
+              const Icon = ICONS[f.icon];
               return (
                 <div
                   key={f.title}
@@ -489,6 +396,27 @@ export default function LandingPage() {
           <div className="testimonials-track">
             {[...TESTIMONIALS, ...TESTIMONIALS].map((t, i) => (
               <div key={`${t.robloxUsername}-${i}`} className="testimonial-card" style={styles.testimonialCard}>
+                <p style={styles.testimonialQuote}>"{t.quote}"</p>
+                <div style={styles.testimonialAuthor}>
+                  <img
+                    src={`/api/roblox/avatar?username=${encodeURIComponent(t.robloxUsername)}`}
+                    alt={t.displayName}
+                    style={styles.testimonialAvatar}
+                  />
+                  <div>
+                    <div style={styles.testimonialName}>@{t.displayName}</div>
+                    <div style={styles.testimonialHandle}>{t.robloxUsername} on Roblox</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="testimonials-marquee" style={styles.testimonialsMarqueeSecondRow}>
+          <div className="testimonials-track testimonials-track-reverse">
+            {[...TESTIMONIALS, ...TESTIMONIALS].reverse().map((t, i) => (
+              <div key={`${t.robloxUsername}-rev-${i}`} className="testimonial-card" style={styles.testimonialCard}>
                 <p style={styles.testimonialQuote}>"{t.quote}"</p>
                 <div style={styles.testimonialAuthor}>
                   <img
@@ -717,10 +645,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1.6,
     margin: 0,
   },
-  testimonialsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: 14,
+  sectionNoPaddingBottom: {
+    maxWidth: 1080,
+    margin: "0 auto",
+    padding: "64px 24px 40px",
+  },
+  testimonialsMarquee: {
+    padding: "0 0 14px",
+  },
+  testimonialsMarqueeSecondRow: {
+    padding: "0 0 64px",
   },
   testimonialCard: {
     background: "rgba(255,255,255,0.02)",
@@ -729,6 +663,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: "22px 20px",
     display: "flex",
     flexDirection: "column",
+    width: 320,
+    flexShrink: 0,
   },
   testimonialQuote: {
     color: "#c4c4cc",

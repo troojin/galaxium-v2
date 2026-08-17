@@ -28,5 +28,25 @@
     "robloxUsername": "Egor_Oxi",
     "displayName": "egorchik",
     "quote": "Galaxium turned my weekend project from 'maybe someday' into something I actually shipped in two days."
+  },
+  {
+    "robloxUsername": "Radjad7",
+    "displayName": "captain",
+    "quote": "I run a small dev team and Galaxium's become the thing everyone opens first. Cuts our prototyping time down massively."
+  },
+  {
+    "robloxUsername": "Heiner1871",
+    "displayName": "heizx",
+    "quote": "Honestly surprised by how clean the scripts it writes are. Not spaghetti code, actual structure I'd write myself."
+  },
+  {
+    "robloxUsername": "kxrastt",
+    "displayName": "spicy",
+    "quote": "Went from not knowing how RemoteEvents work to having a working shop system in an afternoon. Wild."
+  },
+  {
+    "robloxUsername": "MacroVerifer",
+    "displayName": "kai",
+    "quote": "The fact it reads my actual DataModel before generating anything is the part that sold me. It just knows what's already there."
   }
 ]

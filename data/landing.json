@@ -1,0 +1,71 @@
+{
+  "features": [
+    {
+      "icon": "spark",
+      "title": "Speak, don't script",
+      "body": "Describe the system you want in plain English. Galaxium writes real, idiomatic Luau, not pseudocode you still have to fix."
+    },
+    {
+      "icon": "insert",
+      "title": "Lands itself in Studio",
+      "body": "No copy-paste. The Studio plugin builds the exact instance tree automatically the moment a response finishes generating."
+    },
+    {
+      "icon": "eye",
+      "title": "Knows your place",
+      "body": "Galaxium reads your live DataModel, so it targets the part or script you already have instead of guessing or duplicating it."
+    },
+    {
+      "icon": "shield",
+      "title": "Server-safe by default",
+      "body": "Client input is never trusted for currency, damage, or admin logic. Every script follows real Roblox security patterns."
+    }
+  ],
+  "steps": [
+    {
+      "n": "1",
+      "title": "Install the plugin",
+      "body": "Add Galaxium AI to Roblox Studio and sign in once. It stays connected in the background."
+    },
+    {
+      "n": "2",
+      "title": "Tell it what to build",
+      "body": "Type what you want, right in the browser, the same way you'd explain it to another builder."
+    },
+    {
+      "n": "3",
+      "title": "Watch it appear",
+      "body": "Instances and scripts land in your place automatically, wired up and ready to playtest."
+    }
+  ],
+  "faqs": [
+    {
+      "q": "What model does Galaxium use?",
+      "a": "Galaxium runs on OpenAI GPT-5.6 Sol, their flagship model and, frankly, the most agentic thing on the market right now. It doesn't just autocomplete Luau, it reasons through the whole system, plans the instance tree, and ships working code like it's got something to prove. We could've picked something cheaper. We didn't. 🚀"
+    },
+    {
+      "q": "Is Galaxium free?",
+      "a": "Yes, free while we're in early access. No credit card, no trial countdown. That may change down the line, but anyone building with us now keeps early-access pricing."
+    },
+    {
+      "q": "Do I need to know how to script to use it?",
+      "a": "No. Describe what you want in plain English and Galaxium writes the Luau. That said, if you do know Roblox scripting, you'll notice it follows real patterns, not toy examples, so it's just as useful once you're editing by hand too."
+    },
+    {
+      "q": "Will it mess up my existing place?",
+      "a": "Galaxium reads your place's live DataModel before generating anything, so it knows what already exists. If you reference something you already built by name, it targets that instead of creating a duplicate."
+    },
+    {
+      "q": "How does it get things into Studio?",
+      "a": "The Galaxium Studio plugin stays connected while you chat in the browser. The moment a response finishes generating, the plugin builds the instances and drops the scripts in automatically, no copy-paste required."
+    },
+    {
+      "q": "Is the generated code safe to ship?",
+      "a": "Every script follows real Roblox security practices by default, server-authoritative logic for currency, damage, and admin actions, with the client never trusted for anything that matters. You should still read what it writes, same as any code."
+    },
+    {
+      "q": "Can I edit what it builds?",
+      "a": "Yes. Everything Galaxium creates is a normal Part, Script, RemoteEvent, or whatever else, sitting in Studio like anything you built by hand. Edit it, delete it, or ask Galaxium to change it in the next message."
+    }
+  ]
+}
