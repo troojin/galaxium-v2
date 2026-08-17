@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { TestimonialsSection } from "@/components/testimonials-section";
 
 function SparkIcon() {
   return (
@@ -118,13 +119,6 @@ const FAQS = [
     q: "Can I edit what it builds?",
     a: "Yes. Everything Galaxium creates is a normal Part, Script, RemoteEvent, or whatever else, sitting in Studio like anything you built by hand. Edit it, delete it, or ask Galaxium to change it in the next message.",
   },
-];
-
-const INSTANCE_PREVIEWS = [
-  { name: "Door", icon: "Model", posKey: "instancePillPos1", delay: "0s" },
-  { name: "SpeedManager", icon: "Script", posKey: "instancePillPos2", delay: "1.4s" },
-  { name: "Spawn", icon: "Part", posKey: "instancePillPos3", delay: "0.7s" },
-  { name: "ClientHandler", icon: "LocalScript", posKey: "instancePillPos4", delay: "2.1s" },
 ];
 
 export default function LandingPage() {
@@ -253,16 +247,6 @@ export default function LandingPage() {
           to   { opacity: 1; transform: translateY(0); }
         }
 
-        .instance-float { animation: floatY 4.2s ease-in-out infinite; }
-        @keyframes floatY {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-16px); }
-        }
-
-        @media (max-width: 760px) {
-          .instance-float { display: none !important; }
-        }
-
         .rainbow-v2 {
           background: linear-gradient(90deg, #ff5f6d, #ffc371, #a8e063, #56ccf2, #8b5cf6, #ff5f6d);
           background-size: 300% 100%;
@@ -317,20 +301,6 @@ export default function LandingPage() {
 
       <main style={styles.main}>
         <section style={styles.hero}>
-          {INSTANCE_PREVIEWS.map((inst) => (
-            <div
-              key={inst.name}
-              className="instance-float"
-              style={{ ...styles.instancePill, ...styles[inst.posKey], animationDelay: inst.delay }}
-            >
-              <img
-                src={`/assistant/StudioIcons/${inst.icon}.png`}
-                alt={inst.icon}
-                style={styles.instanceIconImg}
-              />
-              <span style={styles.instancePillName}>{inst.name}</span>
-            </div>
-          ))}
           <h1 className="fade-up" style={styles.title}>
             Describe it. Watch it build itself in Studio.
           </h1>
@@ -444,6 +414,8 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <TestimonialsSection />
+
       </main>
 
       <footer style={styles.footer}>
@@ -540,47 +512,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-  },
-  instancePill: {
-    position: "absolute",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 7,
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 10,
-    padding: "8px 12px",
-    backdropFilter: "blur(16px)",
-    WebkitBackdropFilter: "blur(16px)",
-    boxShadow: "0 8px 24px -8px rgba(0,0,0,0.6)",
-  },
-  instancePillPos1: {
-    top: "10%",
-    left: "-6%",
-  },
-  instancePillPos2: {
-    top: "68%",
-    right: "-8%",
-  },
-  instancePillPos3: {
-    top: "-2%",
-    right: "4%",
-  },
-  instancePillPos4: {
-    top: "80%",
-    left: "6%",
-  },
-  instanceIconImg: {
-    width: 16,
-    height: 16,
-    objectFit: "contain",
-    flexShrink: 0,
-  },
-  instancePillName: {
-    color: "#e4e4e9",
-    fontSize: 12.5,
-    fontWeight: 500,
-    whiteSpace: "nowrap",
   },
   title: {
     color: "#ffffff",
