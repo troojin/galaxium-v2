@@ -302,12 +302,38 @@ export default function LandingPage() {
         @media (max-width: 860px) {
           .features-grid { grid-template-columns: 1fr !important; }
           .steps-grid { grid-template-columns: 1fr !important; }
-          .testimonials-grid { grid-template-columns: 1fr !important; }
+        }
+
+        .testimonials-marquee {
+          overflow: hidden;
+          -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+          mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+        }
+        .testimonials-track {
+          display: flex;
+          width: max-content;
+          gap: 14px;
+          animation: testimonialsScroll 34s linear infinite;
+        }
+        .testimonials-marquee:hover .testimonials-track {
+          animation-play-state: paused;
+        }
+        @keyframes testimonialsScroll {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+        .testimonial-card {
+          transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+        .testimonial-card:hover {
+          border-color: rgba(255,255,255,0.16);
+          background: rgba(255,255,255,0.03);
         }
 
         @media (prefers-reduced-motion: reduce) {
           .fade-up { animation: none !important; opacity: 1 !important; transform: none !important; }
           .faq-answer-wrap { transition: none !important; }
+          .testimonials-track { animation: none !important; }
         }
       `}</style>
 
@@ -453,24 +479,18 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section style={styles.section}>
+        <section style={styles.sectionNoPaddingBottom}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>What builders are saying</h2>
           </div>
-          <div className="testimonials-grid" style={styles.testimonialsGrid}>
-            {TESTIMONIALS.map((t, i) => (
-              <div
-                key={t.robloxUsername}
-                className="feature-card fade-up"
-                style={{ ...styles.testimonialCard, animationDelay: `${0.05 * i}s` }}
-                onMouseMove={handleCardMouseMove}
-                onMouseLeave={handleCardMouseLeave}
-              >
-                <div className="feature-card-light" />
-                <p style={styles.testimonialQuote} className="feature-layer-text">
-                  "{t.quote}"
-                </p>
-                <div style={styles.testimonialAuthor} className="feature-layer-text">
+        </section>
+
+        <div className="testimonials-marquee" style={styles.testimonialsMarquee}>
+          <div className="testimonials-track">
+            {[...TESTIMONIALS, ...TESTIMONIALS].map((t, i) => (
+              <div key={`${t.robloxUsername}-${i}`} className="testimonial-card" style={styles.testimonialCard}>
+                <p style={styles.testimonialQuote}>"{t.quote}"</p>
+                <div style={styles.testimonialAuthor}>
                   <img
                     src={`/api/roblox/avatar?username=${encodeURIComponent(t.robloxUsername)}`}
                     alt={t.displayName}
@@ -484,22 +504,9 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-        </section>
+        </div>
 
       </main>
-
-      <footer style={styles.footer}>
-        <span style={styles.footerText}>© {new Date().getFullYear()} Galaxium AI</span>
-        <a
-          href="https://dsc.gg/glxm"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="nav-link"
-          style={styles.navLink}
-        >
-          Discord
-        </a>
-      </footer>
     </div>
   );
 }
@@ -794,21 +801,5 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1.65,
     margin: 0,
     padding: "0 20px 20px",
-  },
-  footer: {
-    position: "relative",
-    zIndex: 1,
-    maxWidth: 1080,
-    margin: "0 auto",
-    width: "100%",
-    padding: "24px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderTop: "1px solid rgba(255,255,255,0.06)",
-  },
-  footerText: {
-    color: "#5a5a64",
-    fontSize: 12.5,
   },
 };
