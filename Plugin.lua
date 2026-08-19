@@ -696,6 +696,146 @@ local function applyInsert(payload)
 	end
 end
 
+
+local function serializeOperationTarget(instance)
+	if not instance then return nil end
+	return dumpSerializeInstance(instance, {})
+end
+
+local function operationResult(ok, op, path, message, instance)
+	return {
+		ok = ok,
+		op = op,
+		path = path,
+		message = message,
+		instance = serializeOperationTarget(instance),
+	}
+end
+
+local function findInstanceByPath(path, instancesByPath)
+	if type(path) ~= "string" or path == "" then
+		return nil, "missing path"
+	end
+	local inst = resolvePath(path, instancesByPath or {})
+	if inst and inst:GetFullName() == path then
+		return inst, nil
+	end
+	-- resolvePath returns nearest parent on miss, so verify the full path manually.
+	local segments = string.split(path, ".")
+	local rootGetter = KNOWN_SERVICES[segments[1]]
+	if not rootGetter then return nil, "unknown root " .. tostring(segments[1]) end
+	local ok, current = pcall(rootGetter)
+	if not ok or not current then return nil, "failed to resolve root" end
+	for i = 2, #segments do
+		current = current:FindFirstChild(segments[i])
+		if not current then return nil, "instance not found: " .. path end
+	end
+	return current, nil
+end
+
+local function createNodeUnder(node, parentPath, instancesByPath, results)
+	node.parent = parentPath
+	local flatList = {}
+	walkAndCreate(node, nil, flatList, instancesByPath)
+	for _, entry in ipairs(flatList) do
+		local parent = resolvePath(entry.parentPath, instancesByPath)
+		entry.instance.Parent = parent
+		table.insert(results, operationResult(true, "createInstance", entry.path, "created", entry.instance))
+	end
+end
+
+local function applyStudioOperations(payload)
+	local results = {}
+	local instancesByPath = {}
+
+	for _, op in ipairs(payload.operations or {}) do
+		local opName = op.op
+		if opName == "inspect" then
+			table.insert(results, operationResult(true, opName, op.path, "snapshot synced", nil))
+		elseif opName == "createInstance" then
+			if type(op.parent) ~= "string" or type(op.className) ~= "string" or type(op.name) ~= "string" then
+				table.insert(results, operationResult(false, opName, op.parent, "createInstance requires parent, className, and name", nil))
+			else
+				local parent, err = findInstanceByPath(op.parent, instancesByPath)
+				if not parent then
+					table.insert(results, operationResult(false, opName, op.parent, err, nil))
+				else
+					local node = { className = op.className, name = op.name, parent = op.parent, properties = op.properties, source = op.source, children = op.children }
+					createNodeUnder(node, op.parent, instancesByPath, results)
+				end
+			end
+		elseif opName == "updateProperties" or opName == "transform" then
+			local target, err = findInstanceByPath(op.path, instancesByPath)
+			if not target then
+				table.insert(results, operationResult(false, opName, op.path, err, nil))
+			else
+				for key, value in pairs(op.properties or {}) do
+					applyProperty(target, key, value)
+				end
+				table.insert(results, operationResult(true, opName, op.path, "updated", target))
+			end
+		elseif opName == "renameInstance" then
+			local target, err = findInstanceByPath(op.path, instancesByPath)
+			if not target or type(op.newName) ~= "string" then
+				table.insert(results, operationResult(false, opName, op.path, err or "renameInstance requires newName", nil))
+			else
+				target.Name = op.newName
+				table.insert(results, operationResult(true, opName, op.path, "renamed", target))
+			end
+		elseif opName == "deleteInstance" then
+			local target, err = findInstanceByPath(op.path, instancesByPath)
+			if not target then
+				table.insert(results, operationResult(false, opName, op.path, err, nil))
+			else
+				local oldPath = target:GetFullName()
+				target:Destroy()
+				table.insert(results, operationResult(true, opName, oldPath, "deleted", nil))
+			end
+		elseif opName == "cloneInstance" then
+			local target, err = findInstanceByPath(op.path, instancesByPath)
+			local parent, parentErr = findInstanceByPath(op.destinationParent, instancesByPath)
+			if not target or not parent then
+				table.insert(results, operationResult(false, opName, op.path, err or parentErr, nil))
+			else
+				local clone = target:Clone()
+				if type(op.name) == "string" then clone.Name = op.name end
+				if op.properties then
+					for key, value in pairs(op.properties) do applyProperty(clone, key, value) end
+				end
+				clone.Parent = parent
+				table.insert(results, operationResult(true, opName, clone:GetFullName(), "cloned", clone))
+			end
+		elseif opName == "setScriptSource" then
+			local target, err = findInstanceByPath(op.path, instancesByPath)
+			if not target then
+				if type(op.parent) == "string" and type(op.className) == "string" and type(op.name) == "string" then
+					local node = { className = op.className, name = op.name, parent = op.parent, source = op.source, properties = op.properties }
+					createNodeUnder(node, op.parent, instancesByPath, results)
+				else
+					table.insert(results, operationResult(false, opName, op.path, err, nil))
+				end
+			elseif target:IsA("Script") or target:IsA("LocalScript") or target:IsA("ModuleScript") then
+				target.Source = tostring(op.source or "")
+				table.insert(results, operationResult(true, opName, op.path, "source updated", target))
+			else
+				table.insert(results, operationResult(false, opName, op.path, "target is not a script", target))
+			end
+		else
+			table.insert(results, operationResult(false, tostring(opName), op.path, "unsupported operation", nil))
+		end
+	end
+
+	if payload.instances then
+		applyInsert({ instances = payload.instances })
+		table.insert(results, operationResult(true, "legacyInstances", nil, "legacy instances applied", nil))
+	end
+
+	local snapshot = nil
+	local ok, dumped = pcall(DataModelDump.dump)
+	if ok then snapshot = dumped end
+	return { results = results, snapshot = snapshot }
+end
+
 -- Local dedupe for applied inserts. The server is the source of truth for what's
 -- "pending", but if an /insert/ack call is slow, drops, or the server doesn't mark
 -- a row done fast enough, the same insert can come back on a later poll. Rather than
@@ -761,11 +901,17 @@ local function startInsertPolling()
 								warn("failed to re-ack already-applied insert " .. tostring(item.id) .. ": " .. tostring(ackErr))
 							end
 						else
-							local applyOk, applyErr = pcall(applyInsert, item.payload)
+							local applyOk, applyErr = pcall(applyStudioOperations, item.payload)
 							if applyOk then
 								log("applied insert " .. tostring(item.id))
 								rememberAppliedInsertId(item.id)
-								local _, ackErr = request("POST", "/insert/ack", { insertId = item.id }, apiKey)
+								if applyErr and applyErr.snapshot then
+									local _, contextErr = request("POST", "/context", { projectId = currentProjectId, snapshot = applyErr.snapshot }, apiKey)
+									if contextErr then
+										warn("failed to sync post-apply snapshot: " .. tostring(contextErr))
+									end
+								end
+								local _, ackErr = request("POST", "/insert/ack", { insertId = item.id, result = applyErr }, apiKey)
 								if ackErr then
 									warn("failed to ack insert " .. tostring(item.id) .. ": " .. tostring(ackErr))
 								end

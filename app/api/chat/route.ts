@@ -200,7 +200,7 @@ async function consumeAndPersist({
     return;
   }
 
-  if (parsed.instances.length === 0) {
+  if (parsed.instances.length === 0 && parsed.operations.length === 0) {
     return;
   }
 
@@ -209,7 +209,11 @@ async function consumeAndPersist({
     .insert({
       project_id: projectId,
       message_id: assistantMessage.id,
-      payload: { instances: parsed.instances },
+      payload: {
+        instances: parsed.instances,
+        operations: parsed.operations,
+        verifyAfterApply: parsed.verifyAfterApply,
+      },
     });
 
   if (pluginInsertError) {
