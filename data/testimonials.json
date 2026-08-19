@@ -2,56 +2,56 @@
   {
     "robloxUsername": "Synara_Web",
     "displayName": "chris",
-    "quote": "Started using Galaxium a couple days ago and it's already changed how I build. Instead of manually placing parts I just describe what I want and it's there."
+    "quote": "Started using Galaxium a couple days ago and it's already completely changed how I build. Instead of manually placing parts, I just describe what I want and it's instantly there."
   },
   {
     "robloxUsername": "lolkostoy",
     "displayName": "wolfie",
-    "quote": "I used to spend hours setting up basic scripts. Galaxium gets me from idea to working prototype in minutes."
+    "quote": "I used to waste hours setting up basic scripts. Galaxium takes me from initial idea to working prototype in minutes."
   },
   {
     "robloxUsername": "Jonas_vilkas",
     "displayName": "JL",
-    "quote": "The instance tree generation is wild — full ScreenGuis, scripts, everything nested correctly. Feels like pair programming with someone who knows Studio inside out."
+    "quote": "The instance tree generation is incredible. Full ScreenGuis, scripts, and complete folder hierarchies are all perfectly nested. It feels like pair programming with a Roblox Studio expert."
   },
   {
     "robloxUsername": "R1GMAST3R",
     "displayName": "r1g",
-    "quote": "Been solo deving for a year and Galaxium is the closest thing to having a teammate. My workflow got so much faster."
+    "quote": "Been solo deving for a year, and Galaxium is the closest thing to having an actual co-developer. My workflow is significantly faster."
   },
   {
     "robloxUsername": "Kotik_wahye",
     "displayName": "zoinchk",
-    "quote": "Didn't expect an AI tool to actually understand Roblox's instance hierarchy this well. Genuinely useful, not just a gimmick."
+    "quote": "Didn't expect an AI tool to genuinely understand Roblox's instance hierarchy this well. Truly useful for real projects, not just a gimmick."
   },
   {
     "robloxUsername": "Egor_Oxi",
     "displayName": "egorchik",
-    "quote": "Galaxium turned my weekend project from 'maybe someday' into something I actually shipped in two days."
+    "quote": "Galaxium turned my weekend project from an idle idea into something fully polished and shipped in two days."
   },
   {
     "robloxUsername": "Radjad7",
     "displayName": "captain",
-    "quote": "I run a small dev team and Galaxium's become the thing everyone opens first. Cuts our prototyping time down massively."
+    "quote": "I manage a small dev team, and Galaxium has become our go-to tool. It drastically cuts down our prototyping phase."
   },
   {
     "robloxUsername": "Heiner1871",
     "displayName": "heizx",
-    "quote": "Honestly surprised by how clean the scripts it writes are. Not spaghetti code, actual structure I'd write myself."
+    "quote": "I was genuinely surprised by how clean the code is. It generates well-structured Luau, not messy spaghetti scripts."
   },
   {
     "robloxUsername": "kxrastt",
     "displayName": "spicy",
-    "quote": "Went from not knowing how RemoteEvents work to having a working shop system in an afternoon. Wild."
+    "quote": "I went from barely understanding RemoteEvents to launching a complete shop system in a single afternoon."
   },
   {
     "robloxUsername": "MacroVerifer",
     "displayName": "kai",
-    "quote": "The fact it reads my actual DataModel before generating anything is the part that sold me. It just knows what's already there."
+    "quote": "The standout feature is how it analyzes your existing DataModel before generating anything. It actually understands your current setup."
   },
   {
     "robloxUsername": "Rolercoastergurl",
     "displayName": "ace",
-    "quote": "Galaxium saved me so much time iterating on UI and backend setups. Absolutely essential for building fast in Studio."
+    "quote": "Galaxium saves an immense amount of time when iterating on UI and backend architecture. An essential plugin for fast iteration in Studio."
   }
 ]
