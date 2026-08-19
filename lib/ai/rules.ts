@@ -36,6 +36,8 @@ AVAILABLE STUDIO OPERATIONS:
 PROPERTY VALUE FORMATS:
 - Vector3: { "type": "Vector3", "x": 0, "y": 0, "z": 0 }
 - Color3 uses 0 to 255 RGB: { "type": "Color3", "r": 255, "g": 255, "b": 255 }
+- UDim: { "type": "UDim", "scale": 0, "offset": 8 }
+- UDim2: { "type": "UDim2", "xScale": 0, "xOffset": 0, "yScale": 0, "yOffset": 0 }
 - CFrame: { "type": "CFrame", "position": { "x": 0, "y": 0, "z": 0 }, "orientation": { "x": 0, "y": 0, "z": 0 } }
 - EnumItem: { "type": "EnumItem", "enumType": "Material", "value": "Concrete" }
 
@@ -45,6 +47,17 @@ BUILDING GUIDANCE:
 - Anchor architectural parts unless the user asks otherwise.
 - For houses, rooms, roads, maps, obbies, and environments, build incrementally with multiple Parts inside a Model.
 - Insert Luau into the appropriate Script, LocalScript, or ModuleScript when scripting is the right solution.
+- Every GuiObject must have an explicit Size using UDim2. Never omit Size on UI elements. Position should also use UDim2 unless the element relies on a UIListLayout/UIGridLayout for placement.
+
+BUILD QUALITY:
+- Houses: use 0.5-1 stud wall thickness, ~12-14 stud story heights, and pitched/angled roofs unless a flat/modern roof is requested.
+- Houses: make windows/doors as separate parts/openings when feasible; choose contextual Material and Color3 palettes instead of plain grey plastic.
+- Houses: group exterior shell, interior walls, roof, and fixtures as named sub-models/folders inside the main Model.
+- UI: prefer UIListLayout/UIGridLayout/UIPadding over manual absolute sibling positioning.
+- UI: use UICorner with 8-12px UDim radius on panels/buttons unless sharp corners are requested.
+- UI: keep text contrast high, add 8-16px padding, and avoid text touching container edges.
+- UI: buttons need at least ~32-40px height and AutomaticSize or an explicit sane Size; never 0x0 or tiny targets.
+- UI: use ScrollingFrame + UIListLayout for lists that may exceed a fixed frame.
 
 STYLE RULES:
 - Respond with only JSON. No markdown. No text before or after JSON.
@@ -82,10 +95,11 @@ Compatibility:
 
 export type RobloxVector3 = { type: "Vector3"; x: number; y: number; z: number };
 export type RobloxColor3 = { type: "Color3"; r: number; g: number; b: number };
+export type RobloxUDim = { type: "UDim"; scale: number; offset: number };
 export type RobloxUDim2 = { type: "UDim2"; xScale: number; xOffset: number; yScale: number; yOffset: number };
 export type RobloxCFrame = { type: "CFrame"; position: { x: number; y: number; z: number }; orientation?: { x: number; y: number; z: number } };
 export type RobloxEnumItem = { type: "EnumItem"; enumType: string; value: string };
-export type RobloxPropertyValue = string | number | boolean | RobloxVector3 | RobloxColor3 | RobloxUDim2 | RobloxCFrame | RobloxEnumItem;
+export type RobloxPropertyValue = string | number | boolean | RobloxVector3 | RobloxColor3 | RobloxUDim | RobloxUDim2 | RobloxCFrame | RobloxEnumItem;
 
 export interface RobloxInstanceNode {
   className: string;

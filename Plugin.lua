@@ -49,6 +49,7 @@ local DUMP_PROPERTY_MAP = {
 	SpotLight = { "Brightness", "Range", "Angle", "Color" },
 	SurfaceGui = { "Face", "AlwaysOnTop" },
 	ScreenGui = { "ResetOnSpawn", "ZIndexBehavior" },
+	GuiObject = { "Size", "Position", "AnchorPoint", "BackgroundColor3", "BackgroundTransparency", "Visible" },
 	TextLabel = { "Text", "TextColor3", "TextSize", "Font" },
 	TextButton = { "Text", "TextColor3", "TextSize", "Font" },
 	ImageLabel = { "Image" },
@@ -83,6 +84,15 @@ local function dumpSafeGetProperty(instance, propName)
 		return { x = value.X, y = value.Y }
 	elseif t == "Color3" then
 		return { r = value.R, g = value.G, b = value.B }
+	elseif t == "UDim" then
+		return { scale = value.Scale, offset = value.Offset }
+	elseif t == "UDim2" then
+		return {
+			xScale = value.X.Scale,
+			xOffset = value.X.Offset,
+			yScale = value.Y.Scale,
+			yOffset = value.Y.Offset,
+		}
 	elseif t == "CFrame" then
 		local pos = value.Position
 		return { x = pos.X, y = pos.Y, z = pos.Z }
@@ -542,6 +552,19 @@ local KNOWN_SERVICES = {
 	end,
 }
 
+local function isFiniteNumber(value)
+	return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+end
+
+local function hasNumbers(value, keys)
+	for _, key in ipairs(keys) do
+		if not isFiniteNumber(value[key]) then
+			return false
+		end
+	end
+	return true
+end
+
 local function coercePropertyValue(value)
 	if typeof(value) ~= "table" or type(value.type) ~= "string" then
 		return value
@@ -550,16 +573,42 @@ local function coercePropertyValue(value)
 	local t = value.type
 
 	if t == "Vector3" then
+		if not hasNumbers(value, { "x", "y", "z" }) then
+			warn("invalid Vector3 property value")
+			return nil
+		end
 		return Vector3.new(value.x, value.y, value.z)
 	elseif t == "Color3" then
+		if not hasNumbers(value, { "r", "g", "b" }) then
+			warn("invalid Color3 property value")
+			return nil
+		end
 		return Color3.fromRGB(value.r, value.g, value.b)
+	elseif t == "UDim" then
+		if not hasNumbers(value, { "scale", "offset" }) then
+			warn("invalid UDim property value")
+			return nil
+		end
+		return UDim.new(value.scale, value.offset)
 	elseif t == "UDim2" then
+		if not hasNumbers(value, { "xScale", "xOffset", "yScale", "yOffset" }) then
+			warn("invalid UDim2 property value")
+			return nil
+		end
 		return UDim2.new(value.xScale, value.xOffset, value.yScale, value.yOffset)
 	elseif t == "CFrame" then
-		local pos = value.position or { x = 0, y = 0, z = 0 }
+		local pos = value.position
+		if typeof(pos) ~= "table" or not hasNumbers(pos, { "x", "y", "z" }) then
+			warn("invalid CFrame position property value")
+			return nil
+		end
 		local cf = CFrame.new(pos.x, pos.y, pos.z)
 		if value.orientation then
 			local o = value.orientation
+			if typeof(o) ~= "table" or not hasNumbers(o, { "x", "y", "z" }) then
+				warn("invalid CFrame orientation property value")
+				return nil
+			end
 			cf = cf * CFrame.Angles(math.rad(o.x), math.rad(o.y), math.rad(o.z))
 		end
 		return cf
