@@ -114,12 +114,6 @@ function useMarquee(direction: 1 | -1, speed = MARQUEE_SPEED) {
 
   return {
     trackRef,
-    onMouseEnter: () => {
-      targetMultRef.current = MARQUEE_HOVER_MULTIPLIER;
-    },
-    onMouseLeave: () => {
-      targetMultRef.current = 1;
-    },
   };
 }
 
@@ -281,9 +275,6 @@ export default function LandingPage() {
           gap: 14px;
           --marquee-duration: 34s;
           animation: testimonialsScroll var(--marquee-duration) linear infinite;
-        }
-        .testimonials-marquee:hover .testimonials-track {
-          animation-duration: calc(var(--marquee-duration) * 3);
         }
         @keyframes testimonialsScroll {
           from { transform: translateX(0); }
