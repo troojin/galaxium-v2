@@ -1163,12 +1163,9 @@ export default function ProjectChatPage() {
         ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
       `}</style>
 
-      <Topbar />
-
-      <header className="topbar-fade-in" style={styles.topbar}>
-        <div style={styles.topbarSide} />
-        <div style={styles.topbarCenter}>
-          {project ? (
+      <Topbar
+        center={
+          project ? (
             <span style={styles.projectNameRow}>
               <span
                 style={{
@@ -1180,22 +1177,9 @@ export default function ProjectChatPage() {
               />
               <span style={styles.projectName}>{project.name}</span>
             </span>
-          ) : null}
-        </div>
-        <div style={styles.topbarSide}>
-          <button
-            className="back-link"
-            style={styles.backBtn}
-            onClick={() => router.push("/dashboard")}
-            aria-label="Back to dashboard"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5" />
-              <path d="M11 18l-6-6 6-6" />
-            </svg>
-          </button>
-        </div>
-      </header>
+          ) : null
+        }
+      />
 
       {loading ? (
         <div style={styles.centerState}>
@@ -1358,33 +1342,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexDirection: "column",
     overflow: "hidden",
   },
-  topbar: {
-    height: 58,
-    width: "100%",
-    display: "grid",
-    gridTemplateColumns: "1fr auto 1fr",
-    alignItems: "center",
-    padding: "0 24px",
-    borderBottom: "1px solid rgba(255,255,255,0.06)",
-    background: "rgba(10,10,10,0.82)",
-    backdropFilter: "blur(18px)",
-    WebkitBackdropFilter: "blur(18px)",
-    position: "sticky",
-    top: 0,
-    zIndex: 10,
-  },
-  topbarCenter: {
-    minWidth: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  topbarSide: {
-    minWidth: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-end",
-  },
   projectNameRow: {
     display: "flex",
     alignItems: "center",
@@ -1413,19 +1370,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     overflow: "hidden",
     textOverflow: "ellipsis",
     maxWidth: 320,
-  },
-  backBtn: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 30,
-    height: 30,
-    background: "none",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 8,
-    color: "#9a9aa5",
-    cursor: "pointer",
-    padding: 0,
   },
   centerState: {
     flex: 1,
