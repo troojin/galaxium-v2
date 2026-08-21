@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 import { StudioIcon } from "@/components/studio-icon";
+import Topbar from "@/components/topbar";
 import { parseGalaxiumResponse } from "@/lib/ai/rules";
 import type { GalaxiumResponse, RobloxInstanceNode } from "@/lib/ai/rules";
 import streamingMessages from "@/data/streaming-messages.json";
@@ -1161,6 +1162,8 @@ export default function ProjectChatPage() {
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; transition: background-color 0.2s ease; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
       `}</style>
+
+      <Topbar />
 
       <header className="topbar-fade-in" style={styles.topbar}>
         <div style={styles.topbarSide} />
