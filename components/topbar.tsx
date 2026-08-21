@@ -31,11 +31,31 @@ function SignOutIcon() {
   );
 }
 
-interface TopbarProps {
-  center?: React.ReactNode;
+function HamburgerIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18" />
+      <path d="M3 12h18" />
+      <path d="M3 18h18" />
+    </svg>
+  );
 }
 
-export default function Topbar({ center }: TopbarProps) {
+function BackIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 12H5" />
+      <path d="M11 18l-6-6 6-6" />
+    </svg>
+  );
+}
+
+interface TopbarProps {
+  center?: React.ReactNode;
+  inProject?: boolean;
+}
+
+export default function Topbar({ center, inProject }: TopbarProps) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -87,7 +107,7 @@ export default function Topbar({ center }: TopbarProps) {
           onClick={() => setMenuOpen((prev) => !prev)}
           aria-label="Open menu"
         >
-          <img src="/icons/icon.png" alt="" style={styles.avatarImg} />
+          <HamburgerIcon />
         </button>
 
         {menuOpen && (
@@ -101,8 +121,8 @@ export default function Topbar({ center }: TopbarProps) {
                 router.push("/dashboard");
               }}
             >
-              <FolderIcon />
-              Projects
+              {inProject ? <BackIcon /> : <FolderIcon />}
+              {inProject ? "Back" : "Projects"}
             </button>
             <button type="button" className="topbar-menu-item" style={styles.menuItem}>
               <GearIcon />
@@ -128,7 +148,7 @@ export default function Topbar({ center }: TopbarProps) {
         }
         .topbar-avatar-btn:hover {
           border-color: rgba(139,92,246,0.5);
-          box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
+          color: #c4b5fd;
         }
         .topbar-dropdown {
           animation: topbarDropdownIn 0.12s ease;
@@ -206,16 +226,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     width: 30,
     height: 30,
     padding: 0,
-    borderRadius: "50%",
+    borderRadius: 8,
     border: "1px solid rgba(255,255,255,0.14)",
     background: "rgba(255,255,255,0.06)",
+    color: "#e5e5ea",
     cursor: "pointer",
-    overflow: "hidden",
-  },
-  avatarImg: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
   },
   dropdown: {
     position: "absolute",
