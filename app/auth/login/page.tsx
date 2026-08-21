@@ -146,10 +146,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div style={styles.rowEnd}>
-            <a href="/forgot-password" style={styles.link}>Forgot password?</a>
-          </div>
-
           <button
             type="submit"
             className="primary-btn"
