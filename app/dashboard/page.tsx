@@ -707,13 +707,9 @@ export default function DashboardPage() {
           {loading ? (
             <LoadingScreen fullScreen={false} message="Loading projects…" />
           ) : !error && projects.length === 0 ? (
-            <div className="glass-sheen" style={styles.emptyState}>
-              <p style={styles.emptyText}>No projects found</p>
-            </div>
+            <p style={styles.emptyTextPlain}>No projects found</p>
           ) : !error && filtered.length === 0 ? (
-            <div className="glass-sheen" style={styles.emptyState}>
-              <p style={styles.emptyText}>No projects match &quot;{query}&quot;</p>
-            </div>
+            <p style={styles.emptyTextPlain}>No projects match &quot;{query}&quot;</p>
           ) : view === "grid" ? (
             <div style={styles.grid}>
               {filtered.map((project) => {
@@ -1259,6 +1255,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#9a9aa5",
     fontSize: 14,
     margin: 0,
+  },
+  emptyTextPlain: {
+    color: "#9a9aa5",
+    fontSize: 14,
+    margin: 0,
+    textAlign: "center",
+    padding: "48px 20px",
   },
   deleteList: {
     margin: "0 0 16px",
