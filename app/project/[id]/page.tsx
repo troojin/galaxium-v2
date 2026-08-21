@@ -1164,6 +1164,7 @@ export default function ProjectChatPage() {
       `}</style>
 
       <Topbar
+        inProject
         center={
           project ? (
             <span style={styles.projectNameRow}>
