@@ -31,7 +31,11 @@ function SignOutIcon() {
   );
 }
 
-export default function Topbar() {
+interface TopbarProps {
+  center?: React.ReactNode;
+}
+
+export default function Topbar({ center }: TopbarProps) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -72,6 +76,8 @@ export default function Topbar() {
           Galaxium <span className="rainbow-v2" style={styles.rainbowV2}>V2</span>
         </span>
       </div>
+
+      {center ? <div style={styles.center}>{center}</div> : null}
 
       <div style={styles.menuWrap} ref={menuRef}>
         <button
@@ -161,8 +167,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     WebkitBackdropFilter: "blur(16px) saturate(140%)",
     borderBottom: "1px solid rgba(255,255,255,0.06)",
     fontFamily: "'Inter', -apple-system, sans-serif",
-  },
-  brandWrap: {
+  },  brandWrap: {
     position: "relative",
     display: "flex",
     alignItems: "center",
@@ -183,6 +188,13 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   rainbowV2: {
     fontWeight: 800,
+  },
+  center: {
+    position: "absolute",
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    alignItems: "center",
   },
   menuWrap: {
     position: "relative",
