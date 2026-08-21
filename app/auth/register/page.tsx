@@ -252,7 +252,7 @@ export default function SignupPage() {
         </form>
 
         <p style={{ ...styles.footerText, marginTop: 24 }}>
-          Already have an account? <a href="/login" style={styles.link}>Sign in</a>
+          Already have an account? <a href="/auth/login" style={styles.link}>Sign in</a>
         </p>
       </div>
     </div>
