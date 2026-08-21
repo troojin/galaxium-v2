@@ -106,7 +106,7 @@ export default function Topbar() {
             <button
               type="button"
               className="topbar-menu-item topbar-menu-item-danger"
-              style={styles.menuItem}
+              style={{ ...styles.menuItem, color: "#f87171" }}
               onClick={handleSignOut}
             >
               <SignOutIcon />
