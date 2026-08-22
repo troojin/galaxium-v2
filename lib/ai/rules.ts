@@ -46,6 +46,12 @@ PROPERTY VALUE FORMATS:
 - Color3 uses 0 to 255 RGB: { "type": "Color3", "r": 255, "g": 255, "b": 255 }
 - CFrame: { "type": "CFrame", "position": { "x": 0, "y": 0, "z": 0 }, "orientation": { "x": 0, "y": 0, "z": 0 } }
 - EnumItem: { "type": "EnumItem", "enumType": "Material", "value": "Concrete" }
+- UDim2 (for GUI Size/Position): { "type": "UDim2", "xScale": 0, "xOffset": 0, "yScale": 0, "yOffset": 0 }
+- UDim (for single-axis GUI values like UICorner.CornerRadius): { "type": "UDim", "scale": 0, "offset": 0 }
+- ColorSequence (for UIGradient.Color): { "type": "ColorSequence", "keypoints": [ { "time": 0, "color": { "r": 0, "g": 255, "b": 0 } }, { "time": 1, "color": { "r": 0, "g": 128, "b": 0 } } ] } — note keypoint colors are plain { "r", "g", "b" } objects, NOT nested Color3-typed objects.
+- NumberSequence (for ParticleEmitter etc.): { "type": "NumberSequence", "keypoints": [ { "time": 0, "value": 0 }, { "time": 1, "value": 1 } ] }
+- Plain numbers and booleans (Thickness, Transparency, CanCollide, etc.) are just raw JSON numbers/booleans — do NOT wrap them in a { "type": ... } object.
+- If a property type is not listed here and you are unsure of its exact shape, prefer a simpler property or a plain number/string over inventing a new nested structure. Never mix escaped quotes into an object you are building — every object is either fully raw JSON or you are not inside a string; do not blend the two.
 
 BUILDING GUIDANCE:
 - Physical builds default to Workspace.
@@ -92,9 +98,29 @@ Compatibility:
 export type RobloxVector3 = { type: "Vector3"; x: number; y: number; z: number };
 export type RobloxColor3 = { type: "Color3"; r: number; g: number; b: number };
 export type RobloxUDim2 = { type: "UDim2"; xScale: number; xOffset: number; yScale: number; yOffset: number };
+export type RobloxUDim = { type: "UDim"; scale: number; offset: number };
 export type RobloxCFrame = { type: "CFrame"; position: { x: number; y: number; z: number }; orientation?: { x: number; y: number; z: number } };
 export type RobloxEnumItem = { type: "EnumItem"; enumType: string; value: string };
-export type RobloxPropertyValue = string | number | boolean | RobloxVector3 | RobloxColor3 | RobloxUDim2 | RobloxCFrame | RobloxEnumItem;
+export type RobloxColorSequence = {
+  type: "ColorSequence";
+  keypoints: { time: number; color: { r: number; g: number; b: number } }[];
+};
+export type RobloxNumberSequence = {
+  type: "NumberSequence";
+  keypoints: { time: number; value: number }[];
+};
+export type RobloxPropertyValue =
+  | string
+  | number
+  | boolean
+  | RobloxVector3
+  | RobloxColor3
+  | RobloxUDim2
+  | RobloxUDim
+  | RobloxCFrame
+  | RobloxEnumItem
+  | RobloxColorSequence
+  | RobloxNumberSequence;
 
 export interface RobloxInstanceNode {
   className: string;

@@ -380,7 +380,6 @@ export async function POST(req: NextRequest) {
         }
       );
     }
-
     const historyForModel: ChatMessage[] = trimmed.map((message) => {
       if (message.role !== "assistant") return message;
       return {
@@ -403,7 +402,8 @@ export async function POST(req: NextRequest) {
     const stream = await createChatCompletionStream({
       messages: aiMessages,
       temperature: 0.4,
-      max_tokens: 4096,
+      max_tokens: 8192,
+      response_format: { type: "json_object" },
     });
 
     const [clientStream, persistStream] = stream.tee();

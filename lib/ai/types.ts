@@ -11,6 +11,7 @@ export interface ChatCompletionParams {
   top_p?: number;
   stream?: boolean;
   reasoning_effort?: string;
+  response_format?: { type: "json_object" };
   [key: string]: unknown;
 }
 
