@@ -3,7 +3,7 @@ import { getRequestContext } from "@cloudflare/next-on-pages";
 import { createClient as createServiceClient, SupabaseClient } from "@supabase/supabase-js";
 import { createChatCompletionStream, ChatMessage } from "@/lib/ai/client";
 import { createClient } from "@/lib/supabase/server";
-import { SYSTEM_PROMPT, parseGalaxiumResponse } from "@/lib/ai/rules";
+import { SYSTEM_PROMPT, parseGalaxiumResponse, compactAssistantMessageForHistory } from "@/lib/ai/rules";
 
 export const runtime = "edge";
 
@@ -200,7 +200,7 @@ async function consumeAndPersist({
     return;
   }
 
-  if (parsed.instances.length === 0 && parsed.operations.length === 0) {
+  if (parsed.instances.length === 0) {
     return;
   }
 
@@ -209,11 +209,7 @@ async function consumeAndPersist({
     .insert({
       project_id: projectId,
       message_id: assistantMessage.id,
-      payload: {
-        instances: parsed.instances,
-        operations: parsed.operations,
-        verifyAfterApply: parsed.verifyAfterApply,
-      },
+      payload: { instances: parsed.instances },
     });
 
   if (pluginInsertError) {
@@ -385,6 +381,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const historyForModel: ChatMessage[] = trimmed.map((message) => {
+      if (message.role !== "assistant") return message;
+      return {
+        role: message.role,
+        content: compactAssistantMessageForHistory(message.content),
+      };
+    });
+
     const supabaseAdmin = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -393,8 +397,8 @@ export async function POST(req: NextRequest) {
     const contextMessage = await buildDataModelContextMessage(supabaseAdmin, projectId);
 
     const aiMessages: ChatMessage[] = contextMessage
-      ? [SYSTEM_PROMPT, contextMessage, ...trimmed]
-      : [SYSTEM_PROMPT, ...trimmed];
+      ? [SYSTEM_PROMPT, contextMessage, ...historyForModel]
+      : [SYSTEM_PROMPT, ...historyForModel];
 
     const stream = await createChatCompletionStream({
       messages: aiMessages,

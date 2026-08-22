@@ -23,6 +23,14 @@ MANDATORY AGENT RULES:
 - Follow Roblox and Luau conventions.
 - Do not fabricate successful Studio changes.
 
+CONVERSATIONAL TURNS:
+- Not every user message requires a Studio change. Questions like "do you have context now", "what does that script do", "why did that happen", or general chat should be answered with operations set to an empty array and instances set to an empty array.
+- Use explanation as your direct, natural-language answer in these cases. Do not invent an operation just to have something to do.
+- Only include operations/instances when the user is actually asking you to create, change, inspect, or remove something in Studio.
+
+HISTORY NOTE:
+- Earlier assistant turns in this conversation may show truncated or omitted script "source" fields (replaced with a short placeholder) to save space. This does not mean the script was removed from the game — it has already been applied. Do not recreate or "restore" a script solely because its source is not shown in history; only rewrite it if the user asks for a change to it.
+
 AVAILABLE STUDIO OPERATIONS:
 - inspect: request the plugin to sync a fresh DataModel snapshot.
 - createInstance: create an instance under an existing parent path.
@@ -77,6 +85,7 @@ Compatibility:
 - Prefer operations. The legacy instances array may be used only for pure creation, but operations is required for edits.
 - createInstance may include children using the same legacy node shape.
 - Parent paths must refer to valid services, generated parent models in the same operation tree, or existing paths from context.
+- For purely conversational turns (no Studio change requested), set operations and instances to empty arrays and put your answer in explanation.
 `.trim(),
 };
 
@@ -171,4 +180,47 @@ export function parseGalaxiumResponse(raw: string): GalaxiumResponse | null {
   } catch {
     return null;
   }
+}
+
+const HISTORY_SOURCE_PLACEHOLDER_THRESHOLD = 200;
+
+function compactNodeForHistory(node: RobloxInstanceNode): RobloxInstanceNode {
+  const compacted: RobloxInstanceNode = { ...node };
+
+  if (typeof compacted.source === "string" && compacted.source.length > HISTORY_SOURCE_PLACEHOLDER_THRESHOLD) {
+    compacted.source = `[source omitted from history — already applied, ${compacted.source.length} chars]`;
+  }
+
+  if (compacted.children) {
+    compacted.children = compacted.children.map(compactNodeForHistory);
+  }
+
+  return compacted;
+}
+
+function compactOperationForHistory(op: StudioOperation): StudioOperation {
+  const compacted: StudioOperation = { ...op };
+
+  if (typeof compacted.source === "string" && compacted.source.length > HISTORY_SOURCE_PLACEHOLDER_THRESHOLD) {
+    compacted.source = `[source omitted from history — already applied to ${compacted.path ?? "target"}, ${compacted.source.length} chars]`;
+  }
+
+  if (compacted.children) {
+    compacted.children = compacted.children.map(compactNodeForHistory);
+  }
+
+  return compacted;
+}
+
+export function compactAssistantMessageForHistory(raw: string): string {
+  const parsed = parseGalaxiumResponse(raw);
+  if (!parsed) return raw;
+
+  const compacted: GalaxiumResponse = {
+    ...parsed,
+    operations: parsed.operations.map(compactOperationForHistory),
+    instances: parsed.instances.map(compactNodeForHistory),
+  };
+
+  return JSON.stringify(compacted);
 }
