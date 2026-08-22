@@ -836,12 +836,6 @@ local function applyStudioOperations(payload)
 	return { results = results, snapshot = snapshot }
 end
 
--- Local dedupe for applied inserts. The server is the source of truth for what's
--- "pending", but if an /insert/ack call is slow, drops, or the server doesn't mark
--- a row done fast enough, the same insert can come back on a later poll. Rather than
--- trusting the server to never re-serve an id, we remember every id we've already
--- built in Studio and skip re-applying it — we still retry the ack so the server can
--- eventually clear it, but we never build the objects twice.
 local appliedInsertIds = {}
 local appliedInsertOrder = {}
 local MAX_APPLIED_INSERT_IDS = 200
