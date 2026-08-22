@@ -7,7 +7,7 @@ import { useToast } from "@/components/toast";
 import { StudioIcon } from "@/components/studio-icon";
 import Topbar from "@/components/topbar";
 import { parseGalaxiumResponse } from "@/lib/ai/rules";
-import type { GalaxiumResponse, RobloxInstanceNode } from "@/lib/ai/rules";
+import type { GalaxiumResponse, RobloxInstanceNode, StudioOperation } from "@/lib/ai/rules";
 import streamingMessages from "@/data/streaming-messages.json";
 
 interface Project {
@@ -128,6 +128,76 @@ function flattenInstances(
     out.push(node);
     if (node.children && node.children.length) {
       out.push(...flattenInstances(node.children));
+    }
+  }
+  return out;
+}
+
+/**
+ * The model is instructed (see rules.ts SYSTEM_PROMPT) to prefer `operations`
+ * over the legacy `instances` array, especially for edits. That means most
+ * real responses carry created/modified content inside `operations`, not
+ * `instances`. The "Created" UI previously only read from `instances`, so it
+ * silently showed nothing for the common case. This derives display nodes
+ * from the operations the model actually used, so scripts/UI created via
+ * createInstance / setScriptSource / cloneInstance still show up.
+ */
+function nodeFromOperation(op: StudioOperation): RobloxInstanceNode | null {
+  const lastSegment = (path?: string) => {
+    if (!path) return undefined;
+    const segments = path.split(".").filter(Boolean);
+    return segments[segments.length - 1];
+  };
+  const parentOf = (path?: string) => {
+    if (!path) return undefined;
+    const segments = path.split(".").filter(Boolean);
+    return segments.slice(0, -1).join(".") || undefined;
+  };
+
+  switch (op.op) {
+    case "createInstance": {
+      if (!op.name) return null;
+      return {
+        className: op.className || "Instance",
+        name: op.name,
+        parent: op.parent,
+        source: op.source,
+        children: op.children,
+      };
+    }
+    case "setScriptSource": {
+      const name = lastSegment(op.path) || op.name || "Script";
+      return {
+        className: "Script",
+        name,
+        parent: parentOf(op.path),
+        source: op.source,
+      };
+    }
+    case "cloneInstance": {
+      const name = op.newName || lastSegment(op.path) || "Clone";
+      return {
+        className: "Instance",
+        name,
+        parent: op.destinationParent,
+      };
+    }
+    default:
+      // updateProperties / transform / renameInstance / deleteInstance / inspect
+      // are modifications rather than new content — not shown in the Created list.
+      return null;
+  }
+}
+
+function flattenOperations(operations: StudioOperation[]): RobloxInstanceNode[] {
+  const out: RobloxInstanceNode[] = [];
+  for (const op of operations) {
+    const node = nodeFromOperation(op);
+    if (node) {
+      out.push(node);
+      if (node.children && node.children.length) {
+        out.push(...flattenInstances(node.children));
+      }
     }
   }
   return out;
@@ -446,7 +516,10 @@ function ScriptPreviewModal({
 
 function GalaxiumMessageView({ response }: { response: GalaxiumResponse }) {
   const [activeScript, setActiveScript] = useState<RobloxInstanceNode | null>(null);
-  const flat = useMemo(() => flattenInstances(response.instances), [response.instances]);
+  const flat = useMemo(
+    () => [...flattenInstances(response.instances), ...flattenOperations(response.operations)],
+    [response.instances, response.operations]
+  );
 
   return (
     <div style={styles.galaxiumMessage}>
