@@ -1,5 +1,4 @@
 local HttpService = game:GetService("HttpService")
-local ScriptEditorService = game:GetService("ScriptEditorService")
 
 local API_BASE = "https://galaxium.lol/api/plugin"
 local SETTING_KEY = "galaxiumApiKey"
@@ -601,38 +600,6 @@ end
 -- ScreenGui and attach it to the ScreenGui's own parent instead.
 -- The explicit "parent" field is only honored for a payload's root-level instances,
 -- where there is no structural parent to fall back on (e.g. "StarterGui").
-local function setScriptSource(instance, source)
-	if not (instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript")) then
-		return true
-	end
-
-	local text = tostring(source or "")
-
-	-- Use ScriptEditorService for edit-time source updates. This keeps open
-	-- script documents in sync and avoids relying on the legacy Source setter.
-	local ok, err = pcall(function()
-		ScriptEditorService:UpdateSourceAsync(instance, function()
-			return text
-		end)
-	end)
-	if ok then
-		return true
-	end
-
-	-- Fallback for Studio/plugin versions where UpdateSourceAsync is unavailable
-	-- or rejects a newly-created script. Never let a source failure prevent the
-	-- Instance from being parented into the DataModel.
-	local fallbackOk, fallbackErr = pcall(function()
-		instance.Source = text
-	end)
-	if fallbackOk then
-		return true
-	end
-
-	warn("failed to set source on " .. instance.ClassName .. " '" .. instance.Name .. "': " .. tostring(fallbackErr or err))
-	return false, fallbackErr or err
-end
-
 local function walkAndCreate(node, structuralParentPath, flatList, instancesByPath)
 	local parentPath
 	if structuralParentPath then
@@ -656,34 +623,23 @@ local function walkAndCreate(node, structuralParentPath, flatList, instancesByPa
 
 	inst.Name = node.name
 
-	-- Important: creation and parenting are recorded before properties/source are
-	-- applied. A failing property or script-source write must never leave the
-	-- newly-created Instance detached from Studio.
+	if node.properties then
+		for key, value in pairs(node.properties) do
+			applyProperty(inst, key, value)
+		end
+	end
+
+	if node.source and (inst:IsA("Script") or inst:IsA("LocalScript") or inst:IsA("ModuleScript")) then
+		inst.Source = node.source
+	end
+
 	instancesByPath[ownPath] = inst
-	table.insert(flatList, {
-		instance = inst,
-		parentPath = parentPath,
-		path = ownPath,
-		properties = node.properties,
-		source = node.source,
-	})
+	table.insert(flatList, { instance = inst, parentPath = parentPath, path = ownPath })
 
 	if node.children then
 		for _, child in ipairs(node.children) do
 			walkAndCreate(child, ownPath, flatList, instancesByPath)
 		end
-	end
-end
-
-local function configureCreatedEntry(entry)
-	if entry.properties then
-		for key, value in pairs(entry.properties) do
-			applyProperty(entry.instance, key, value)
-		end
-	end
-
-	if entry.source and (entry.instance:IsA("Script") or entry.instance:IsA("LocalScript") or entry.instance:IsA("ModuleScript")) then
-		setScriptSource(entry.instance, entry.source)
 	end
 end
 
@@ -721,34 +677,6 @@ local function resolvePath(path, instancesByPath)
 	return current
 end
 
-local function parentCreatedEntries(flatList, instancesByPath)
-	for _, entry in ipairs(flatList) do
-		local parent
-		if entry.parentPath then
-			parent = resolvePath(entry.parentPath, instancesByPath)
-		else
-			parent = workspace
-		end
-
-		local ok, err = pcall(function()
-			entry.instance.Parent = parent
-		end)
-		if not ok then
-			pcall(function() entry.instance:Destroy() end)
-			error("failed to parent " .. tostring(entry.path) .. " under " .. tostring(entry.parentPath or "Workspace") .. ": " .. tostring(err))
-		end
-
-		if entry.instance.Parent ~= parent then
-			pcall(function() entry.instance:Destroy() end)
-			error("Studio did not accept parent assignment for " .. tostring(entry.path) .. " under " .. tostring(entry.parentPath or "Workspace"))
-		end
-	end
-
-	for _, entry in ipairs(flatList) do
-		configureCreatedEntry(entry)
-	end
-end
-
 local function applyInsert(payload)
 	local flatList = {}
 	local instancesByPath = {}
@@ -757,7 +685,15 @@ local function applyInsert(payload)
 		walkAndCreate(node, nil, flatList, instancesByPath)
 	end
 
-	parentCreatedEntries(flatList, instancesByPath)
+	for _, entry in ipairs(flatList) do
+		local parent
+		if entry.parentPath then
+			parent = resolvePath(entry.parentPath, instancesByPath)
+		else
+			parent = workspace
+		end
+		entry.instance.Parent = parent
+	end
 end
 
 
@@ -801,8 +737,9 @@ local function createNodeUnder(node, parentPath, instancesByPath, results)
 	node.parent = parentPath
 	local flatList = {}
 	walkAndCreate(node, nil, flatList, instancesByPath)
-	parentCreatedEntries(flatList, instancesByPath)
 	for _, entry in ipairs(flatList) do
+		local parent = resolvePath(entry.parentPath, instancesByPath)
+		entry.instance.Parent = parent
 		table.insert(results, operationResult(true, "createInstance", entry.path, "created", entry.instance))
 	end
 end
@@ -878,12 +815,8 @@ local function applyStudioOperations(payload)
 					table.insert(results, operationResult(false, opName, op.path, err, nil))
 				end
 			elseif target:IsA("Script") or target:IsA("LocalScript") or target:IsA("ModuleScript") then
-				local sourceOk, sourceErr = setScriptSource(target, op.source)
-				if sourceOk then
-					table.insert(results, operationResult(true, opName, op.path, "source updated", target))
-				else
-					table.insert(results, operationResult(false, opName, op.path, "source update failed: " .. tostring(sourceErr), target))
-				end
+				target.Source = tostring(op.source or "")
+				table.insert(results, operationResult(true, opName, op.path, "source updated", target))
 			else
 				table.insert(results, operationResult(false, opName, op.path, "target is not a script", target))
 			end
