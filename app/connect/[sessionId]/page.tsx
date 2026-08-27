@@ -48,8 +48,10 @@ export default function ConnectPage() {
           setPhase("error");
           return;
         }
-
-          const { data: projectData } = await supabase
+         
+        // ok so this shit searches up people on the database and finds there name to match the project
+        // shits so awsome
+        const { data: projectData } = await supabase
           .from("projects")
           .select("id, name")
           .eq("user_id", data.session.user.id)
@@ -63,7 +65,7 @@ export default function ConnectPage() {
 
         setPhase("done");
       } catch {
-        setErrorMessage("Network error — try again");
+        setErrorMessage("Network error, please try again later");
         setPhase("error");
       }
     };
