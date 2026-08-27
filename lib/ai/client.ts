@@ -12,20 +12,20 @@ export type {
   ChatCompletion,
 } from "./types";
 
-const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
+const API_BASE_URL = "https://api.groq.com/openai/v1";
 const KEY_AMOUNT = "9";
 
-function getGroqApiKeys(): string[] {
+function getApiKeys(): string[] {
   const env = getRequestContext().env as Record<string, string | undefined>;
   const keys: string[] = [];
   const maxKeys = parseInt(KEY_AMOUNT, 10) || 0;
 
-  if (env.GROK_API_KEY && env.GROK_API_KEY.trim().length > 0) {
-    keys.push(env.GROK_API_KEY);
+  if (env.CHAT_API_KEY && env.CHAT_API_KEY.trim().length > 0) {
+    keys.push(env.CHAT_API_KEY);
   }
 
   for (let i = 1; i <= maxKeys; i++) {
-    const val = env[`GROK_API_KEY_${i}`];
+    const val = env[`CHAT_API_KEY_${i}`];
     if (val && typeof val === "string" && val.trim().length > 0 && !keys.includes(val)) {
       keys.push(val);
     }
@@ -37,10 +37,10 @@ function getGroqApiKeys(): string[] {
 let currentKeyIndex = Math.floor(Math.random() * 100);
 
 function getNextApiKey(): string {
-  const keys = getGroqApiKeys();
+  const keys = getApiKeys();
   if (keys.length === 0) {
     throw new Error(
-      "No GROK_API_KEY or GROK_API_KEY_* environment variables configured."
+      "No CHAT_API_KEY or CHAT_API_KEY_* environment variables configured."
     );
   }
   const key = keys[currentKeyIndex % keys.length];
@@ -52,16 +52,16 @@ async function fetchWithKeyFallback(
   endpoint: string,
   body: Record<string, unknown>
 ): Promise<Response> {
-  const keys = getGroqApiKeys();
+  const keys = getApiKeys();
   if (keys.length === 0) {
-    throw new Error("No Groq API keys available.");
+    throw new Error("No API keys available.");
   }
 
   let lastErrorMsg = "";
   for (let attempt = 0; attempt < keys.length; attempt++) {
     const apiKey = getNextApiKey();
 
-    const res = await fetch(`${GROQ_BASE_URL}${endpoint}`, {
+    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -77,12 +77,12 @@ async function fetchWithKeyFallback(
     lastErrorMsg = await res.text();
 
     if (res.status !== 429 && res.status !== 401) {
-      throw new Error(`Groq API returned status ${res.status}: ${lastErrorMsg}`);
+      throw new Error(`API returned status ${res.status}: ${lastErrorMsg}`);
     }
   }
 
   throw new Error(
-    `All ${keys.length} Groq API keys exhausted/rate-limited. Last error: ${lastErrorMsg}`
+    `All API keys exhausted/rate-limited. Last error: ${lastErrorMsg}`
   );
 }
 
@@ -105,7 +105,7 @@ export async function createChatCompletionStream(
   const res = await fetchWithKeyFallback("/chat/completions", body);
 
   if (!res.body) {
-    throw new Error("Groq returned an empty response body.");
+    throw new Error("Received an empty response body.");
   }
 
   return res.body;
