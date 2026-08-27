@@ -542,6 +542,20 @@ local KNOWN_SERVICES = {
 	end,
 }
 
+-- Strips a leading "game." / "Game." segment so paths written either way
+-- ("ServerScriptService.Foo" or "game.ServerScriptService.Foo") resolve
+-- to the same thing instead of silently missing each other.
+local function normalizePath(path)
+	if type(path) ~= "string" then
+		return path
+	end
+	local firstSeg = string.match(path, "^[^.]+")
+	if firstSeg == "game" or firstSeg == "Game" then
+		return (string.gsub(path, "^[^.]+%.", "", 1))
+	end
+	return path
+end
+
 local function coercePropertyValue(value)
 	if typeof(value) ~= "table" or type(value.type) ~= "string" then
 		return value
@@ -605,7 +619,7 @@ local function walkAndCreate(node, structuralParentPath, flatList, instancesByPa
 	if structuralParentPath then
 		parentPath = structuralParentPath
 	else
-		parentPath = node.parent
+		parentPath = normalizePath(node.parent)
 	end
 
 	local ownPath
@@ -644,6 +658,8 @@ local function walkAndCreate(node, structuralParentPath, flatList, instancesByPa
 end
 
 local function resolvePath(path, instancesByPath)
+	path = normalizePath(path)
+
 	if instancesByPath[path] then
 		return instancesByPath[path]
 	end
@@ -716,6 +732,8 @@ local function findInstanceByPath(path, instancesByPath)
 	if type(path) ~= "string" or path == "" then
 		return nil, "missing path"
 	end
+	path = normalizePath(path)
+
 	local inst = resolvePath(path, instancesByPath or {})
 	if inst and inst:GetFullName() == path then
 		return inst, nil
@@ -731,6 +749,29 @@ local function findInstanceByPath(path, instancesByPath)
 		if not current then return nil, "instance not found: " .. path end
 	end
 	return current, nil
+end
+
+-- Looks for an instance already sitting under `parentPath` with the given
+-- name (and, if provided, class), whether it was created earlier in this
+-- same batch of operations or already existed in the game. Used to avoid
+-- creating a duplicate when an operation's own "path" doesn't line up
+-- exactly with how a prior operation in the same batch created it.
+local function findExistingChild(parentPath, name, className, instancesByPath)
+	if type(parentPath) ~= "string" or type(name) ~= "string" then
+		return nil
+	end
+	local parent = resolvePath(parentPath, instancesByPath or {})
+	if not parent then
+		return nil
+	end
+	local existing = parent:FindFirstChild(name)
+	if not existing then
+		return nil
+	end
+	if className and existing.ClassName ~= className then
+		return nil
+	end
+	return existing
 end
 
 local function createNodeUnder(node, parentPath, instancesByPath, results)
@@ -760,8 +801,23 @@ local function applyStudioOperations(payload)
 				if not parent then
 					table.insert(results, operationResult(false, opName, op.parent, err, nil))
 				else
-					local node = { className = op.className, name = op.name, parent = op.parent, properties = op.properties, source = op.source, children = op.children }
-					createNodeUnder(node, op.parent, instancesByPath, results)
+					-- Guard against the AI re-issuing a createInstance for something
+					-- that was already created earlier in this same batch (or already
+					-- exists in the game) under a slightly different path string.
+					local existing = findExistingChild(op.parent, op.name, op.className, instancesByPath)
+					if existing then
+						instancesByPath[normalizePath(op.parent) .. "." .. op.name] = existing
+						if op.properties then
+							for key, value in pairs(op.properties) do applyProperty(existing, key, value) end
+						end
+						if op.source and (existing:IsA("Script") or existing:IsA("LocalScript") or existing:IsA("ModuleScript")) then
+							existing.Source = op.source
+						end
+						table.insert(results, operationResult(true, opName, existing:GetFullName(), "already existed, reused", existing))
+					else
+						local node = { className = op.className, name = op.name, parent = op.parent, properties = op.properties, source = op.source, children = op.children }
+						createNodeUnder(node, op.parent, instancesByPath, results)
+					end
 				end
 			end
 		elseif opName == "updateProperties" or opName == "transform" then
@@ -806,7 +862,20 @@ local function applyStudioOperations(payload)
 				table.insert(results, operationResult(true, opName, clone:GetFullName(), "cloned", clone))
 			end
 		elseif opName == "setScriptSource" then
+			-- 1) exact path match against this batch / the live tree
 			local target, err = findInstanceByPath(op.path, instancesByPath)
+
+			-- 2) fall back to "does parent already have a child with this name",
+			--    which covers a preceding createInstance op in the same batch
+			--    (or a pre-existing script) even if op.path doesn't line up
+			--    with how that instance was actually keyed.
+			if not target and type(op.parent) == "string" and type(op.name) == "string" then
+				local existing = findExistingChild(op.parent, op.name, op.className, instancesByPath)
+				if existing and (existing:IsA("Script") or existing:IsA("LocalScript") or existing:IsA("ModuleScript")) then
+					target = existing
+				end
+			end
+
 			if not target then
 				if type(op.parent) == "string" and type(op.className) == "string" and type(op.name) == "string" then
 					local node = { className = op.className, name = op.name, parent = op.parent, source = op.source, properties = op.properties }
@@ -910,7 +979,21 @@ local function startInsertPolling()
 									warn("failed to ack insert " .. tostring(item.id) .. ": " .. tostring(ackErr))
 								end
 							else
+								-- Previously: only warned locally and left the insert
+								-- "pending" forever, so a real apply failure was
+								-- invisible outside the Studio Output window and the
+								-- chat kept showing the operation as if it succeeded.
+								-- Now we ack it as failed so it stops retrying and
+								-- the failure reason actually reaches the server.
 								warn("failed to apply insert " .. tostring(item.id) .. ": " .. tostring(applyErr))
+								rememberAppliedInsertId(item.id)
+								local _, ackErr = request("POST", "/insert/ack", {
+									insertId = item.id,
+									result = { results = {}, error = tostring(applyErr) },
+								}, apiKey)
+								if ackErr then
+									warn("failed to ack failed insert " .. tostring(item.id) .. ": " .. tostring(ackErr))
+								end
 							end
 						end
 					end

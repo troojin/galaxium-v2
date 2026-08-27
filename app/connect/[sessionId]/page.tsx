@@ -48,7 +48,7 @@ export default function ConnectPage() {
           setPhase("error");
           return;
         }
-         
+
         // ok so this shit searches up people on the database and finds there name to match the project
         // shits so awsome
         const { data: projectData } = await supabase
@@ -147,7 +147,7 @@ export default function ConnectPage() {
               You can close this tab and go back to Roblox Studio.
             </p>
             <button className="primary-btn" style={styles.submitBtn} onClick={goToDashboard}>
-              {recentProject ? `Return to ${recentProject.name}` : "Go to dashboard"}
+              {recentProject ? `Return to ${recentProject.name}` : "Return to dashboard"}
             </button>
           </>
         )}
