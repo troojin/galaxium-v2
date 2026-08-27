@@ -61,6 +61,10 @@ export default function ConnectPage() {
     router.push(`/signup?next=/connect/${sessionId}`);
   };
 
+  const goToDashboard = () => {
+    router.push("/dashboard");
+  };
+
   return (
     <div style={styles.page}>
       <style>{`
@@ -118,6 +122,9 @@ export default function ConnectPage() {
             <p style={styles.subtitle}>
               You can close this tab and go back to Roblox Studio.
             </p>
+            <button className="primary-btn" style={styles.submitBtn} onClick={goToDashboard}>
+              Go to dashboard
+            </button>
           </>
         )}
 
