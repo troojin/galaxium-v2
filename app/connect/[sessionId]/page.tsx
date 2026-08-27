@@ -7,6 +7,11 @@ import { useToast } from "@/components/toast";
 
 export const runtime = 'edge';
 
+interface RecentProject {
+  id: string;
+  name: string;
+}
+
 export default function ConnectPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const router = useRouter();
@@ -17,6 +22,7 @@ export default function ConnectPage() {
     "checking"
   );
   const [errorMessage, setErrorMessage] = useState("");
+  const [recentProject, setRecentProject] = useState<RecentProject | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -43,6 +49,18 @@ export default function ConnectPage() {
           return;
         }
 
+          const { data: projectData } = await supabase
+          .from("projects")
+          .select("id, name")
+          .eq("user_id", data.session.user.id)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (projectData) {
+          setRecentProject(projectData);
+        }
+
         setPhase("done");
       } catch {
         setErrorMessage("Network error — try again");
@@ -62,7 +80,11 @@ export default function ConnectPage() {
   };
 
   const goToDashboard = () => {
-    router.push("/dashboard");
+    if (recentProject) {
+      router.push(`/project/${recentProject.id}`);
+    } else {
+      router.push("/dashboard");
+    }
   };
 
   return (
@@ -123,7 +145,7 @@ export default function ConnectPage() {
               You can close this tab and go back to Roblox Studio.
             </p>
             <button className="primary-btn" style={styles.submitBtn} onClick={goToDashboard}>
-              Go to dashboard
+              {recentProject ? `Return to ${recentProject.name}` : "Go to dashboard"}
             </button>
           </>
         )}
