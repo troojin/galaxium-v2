@@ -5,7 +5,7 @@ import { keywords } from "@/lib/keywords";
 
 export const metadata: Metadata = {
   title: "Galaxium",
-  description: "tba",
+  description: '"Galactic" AI',
   keywords: keywords,
 };
 
