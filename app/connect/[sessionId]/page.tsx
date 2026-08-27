@@ -65,7 +65,7 @@ export default function ConnectPage() {
 
         setPhase("done");
       } catch {
-        setErrorMessage("Network error, please try again later");
+        setErrorMessage("Network error — try again");
         setPhase("error");
       }
     };
@@ -143,12 +143,13 @@ export default function ConnectPage() {
         {phase === "done" && (
           <>
             <h1 style={styles.title}>Plugin connected</h1>
-            <p style={styles.subtitle}>
-              You can close this tab and go back to Roblox Studio.
-            </p>
-            <button className="primary-btn" style={styles.submitBtn} onClick={goToDashboard}>
+            <a
+              className="link"
+              style={styles.returnLink}
+              onClick={goToDashboard}
+            >
               {recentProject ? `Return to ${recentProject.name}` : "Return to dashboard"}
-            </button>
+            </a>
           </>
         )}
 
@@ -213,6 +214,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#7c3aed",
     fontSize: 13,
     fontWeight: 500,
+    cursor: "pointer",
+  },
+  returnLink: {
+    color: "#7c3aed",
+    fontSize: 14,
+    fontWeight: 700,
+    textDecoration: "underline",
     cursor: "pointer",
   },
 };
