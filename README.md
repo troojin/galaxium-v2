@@ -8,7 +8,11 @@ Galaxium is an AI-powered Roblox Studio plugin that helps you build and script R
 - Luau help
 - Roblox development assistance
 - Script debugging
-  
+
+## To Do
+
+- Replace hamburger icon with Roblox avatar
+
 ## Links
 
 https://galaxium.lol
