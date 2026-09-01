@@ -26,35 +26,69 @@ export default function ConnectPage() {
 
   useEffect(() => {
     const run = async () => {
-      const { data } = await supabase.auth.getSession();
+      if (!sessionId) {
+        setErrorMessage(
+          "This connection link is missing some information. Go back to Roblox Studio and try connecting the plugin again."
+        );
+        setPhase("error");
+        return;
+      }
 
-      if (!data.session) {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !userData.user) {
         setPhase("loggedOut");
         return;
       }
 
       setPhase("confirming");
 
+      let res: Response;
       try {
-        const res = await fetch("/api/plugin/auth/confirm", {
+        res = await fetch("/api/plugin/auth/confirm", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId }),
         });
-        const result = await res.json();
+      } catch {
+        setErrorMessage(
+          "Couldn't reach Galaxium's servers. Check your internet connection and try again."
+        );
+        setPhase("error");
+        return;
+      }
 
-        if (!res.ok) {
-          setErrorMessage(result.error ?? "Something went wrong");
-          setPhase("error");
-          return;
+      let result: { error?: string } = {};
+      try {
+        result = await res.json();
+      } catch {
+      }
+
+      if (!res.ok) {
+        let message = result.error;
+        if (!message) {
+          if (res.status === 401) {
+            message = "Your session has expired. Please log in again to reconnect the plugin.";
+          } else if (res.status === 404) {
+            message = "This connection link has expired or was already used. Try connecting again from Roblox Studio.";
+          } else if (res.status >= 500) {
+            message = `Galaxium's server ran into a problem (error ${res.status}). Please try again in a moment.`;
+          } else {
+            message = `The plugin couldn't confirm the connection (error ${res.status}).`;
+          }
         }
+        setErrorMessage(message);
+        setPhase("error");
+        return;
+      }
 
+      try {
         // ok so this shit searches up people on the database and finds there name to match the project
         // shits so awsome
         const { data: projectData } = await supabase
           .from("projects")
           .select("id, name")
-          .eq("user_id", data.session.user.id)
+          .eq("user_id", userData.user.id)
           .order("updated_at", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -62,12 +96,10 @@ export default function ConnectPage() {
         if (projectData) {
           setRecentProject(projectData);
         }
-
-        setPhase("done");
       } catch {
-        setErrorMessage("Network error — try again");
-        setPhase("error");
       }
+
+      setPhase("done");
     };
 
     run();
