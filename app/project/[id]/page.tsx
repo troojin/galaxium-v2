@@ -600,6 +600,15 @@ function LimitReachedToast({
           {pluginConnected ? "Plugin connected — you're all set" : "Waiting for plugin connection…"}
         </span>
       </div>
+      <a
+        href="https://dsc.gg/glxm"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="limit-toast-link"
+        style={styles.limitToastLink}
+      >
+        Need help connecting? Check #tutorial in the discord
+      </a>
     </div>
   );
 }
@@ -1150,6 +1159,9 @@ export default function ProjectChatPage() {
           50%  { opacity: 1; }
           100% { opacity: 0.5; }
         }
+
+        .limit-toast-link { transition: color 0.2s ease; }
+        .limit-toast-link:hover { color: #c4b5fd !important; text-decoration: underline; }
 
         .generating-text-shimmer {
           background: linear-gradient(90deg, #9a9aa5 0%, #f0f0f5 50%, #9a9aa5 100%);
@@ -1941,5 +1953,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#9a9aa5",
     fontSize: 12,
     fontWeight: 500,
+  },
+  limitToastLink: {
+    display: "block",
+    color: "#a78bfa",
+    fontSize: 11.5,
+    fontWeight: 600,
+    textDecoration: "none",
+    marginTop: 12,
+    paddingTop: 12,
+    borderTop: "1px solid rgba(255,255,255,0.07)",
   },
 };
