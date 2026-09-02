@@ -22,6 +22,7 @@ export default function ConnectPage() {
     "checking"
   );
   const [errorMessage, setErrorMessage] = useState("");
+  const [errorDetail, setErrorDetail] = useState("");
   const [recentProject, setRecentProject] = useState<RecentProject | null>(null);
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function ConnectPage() {
         setErrorMessage(
           "This connection link is missing some information. Go back to Roblox Studio and try connecting the plugin again."
         );
+        setErrorDetail("ERROR: missing sessionId param");
         setPhase("error");
         return;
       }
@@ -54,6 +56,7 @@ export default function ConnectPage() {
         setErrorMessage(
           "Couldn't reach Galaxium's servers. Check your internet connection and try again."
         );
+        setErrorDetail("NETWORK_ERROR: fetch to /api/plugin/auth/confirm failed");
         setPhase("error");
         return;
       }
@@ -78,6 +81,7 @@ export default function ConnectPage() {
           }
         }
         setErrorMessage(message);
+        setErrorDetail(`HTTP ${res.status}${result.error ? ` — ${result.error}` : ""}`);
         setPhase("error");
         return;
       }
@@ -189,6 +193,9 @@ export default function ConnectPage() {
           <>
             <h1 style={styles.title}>Couldn&apos;t connect</h1>
             <p style={{ ...styles.subtitle, color: "#e11d48" }}>{errorMessage}</p>
+            {errorDetail && (
+              <p style={styles.errorDetail}>{errorDetail}</p>
+            )}
           </>
         )}
       </div>
@@ -254,5 +261,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 700,
     textDecoration: "underline",
     cursor: "pointer",
+  },
+  errorDetail: {
+    color: "#555555",
+    fontSize: 11,
+    fontFamily: "monospace",
+    marginTop: -12,
+    marginBottom: 0,
+    wordBreak: "break-word",
   },
 };
