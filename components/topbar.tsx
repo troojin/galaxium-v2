@@ -4,14 +4,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-function FolderIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-    </svg>
-  );
-}
-
 function GearIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -112,18 +104,20 @@ export default function Topbar({ center, inProject }: TopbarProps) {
 
         {menuOpen && (
           <div className="topbar-dropdown" style={styles.dropdown}>
-            <button
-              type="button"
-              className="topbar-menu-item"
-              style={styles.menuItem}
-              onClick={() => {
-                setMenuOpen(false);
-                router.push("/dashboard");
-              }}
-            >
-              {inProject ? <BackIcon /> : <FolderIcon />}
-              {inProject ? "Back" : "Projects"}
-            </button>
+            {inProject && (
+              <button
+                type="button"
+                className="topbar-menu-item"
+                style={styles.menuItem}
+                onClick={() => {
+                  setMenuOpen(false);
+                  router.push("/dashboard");
+                }}
+              >
+                <BackIcon />
+                Back
+              </button>
+            )}
             <button type="button" className="topbar-menu-item" style={styles.menuItem}>
               <GearIcon />
               Settings
@@ -182,12 +176,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: "center",
     justifyContent: "space-between",
     padding: "14px 24px",
-    background: "rgba(10,10,10,0.75)",
-    backdropFilter: "blur(16px) saturate(140%)",
-    WebkitBackdropFilter: "blur(16px) saturate(140%)",
+    background: "#000000",
     borderBottom: "1px solid rgba(255,255,255,0.06)",
     fontFamily: "'Inter', -apple-system, sans-serif",
-  },  brandWrap: {
+  },
+  brandWrap: {
     position: "relative",
     display: "flex",
     alignItems: "center",
