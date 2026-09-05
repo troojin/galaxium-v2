@@ -4,14 +4,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-function FolderIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-    </svg>
-  );
-}
-
 function GearIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -27,16 +19,6 @@ function SignOutIcon() {
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <path d="M16 17l5-5-5-5" />
       <path d="M21 12H9" />
-    </svg>
-  );
-}
-
-function HamburgerIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 6h18" />
-      <path d="M3 12h18" />
-      <path d="M3 18h18" />
     </svg>
   );
 }
@@ -233,11 +215,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     padding: 0,
     borderRadius: "50%",
-    border: "2px solid rgba(255,255,255,0.14)",
+    border: "2px solid rgba(255,255,255,0.18)",
     background: "transparent",
     cursor: "pointer",
     overflow: "hidden",
@@ -247,6 +229,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     height: "100%",
     objectFit: "cover",
     borderRadius: "50%",
+    display: "block",
   },
   dropdown: {
     position: "absolute",
