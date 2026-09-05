@@ -74,14 +74,29 @@ export default function ConnectPage() {
             message = "Your session has expired. Please log in again to reconnect the plugin.";
           } else if (res.status === 404) {
             message = "This connection link has expired or was already used. Try connecting again from Roblox Studio.";
+          } else if (res.status === 500) {
+            message = "Galaxium's server ran into an internal error. This is likely a database issue — please try again in a moment.";
+          } else if (res.status === 502 || res.status === 503 || res.status === 504) {
+            message = "Galaxium's servers are temporarily unavailable. Please try again in a moment.";
           } else if (res.status >= 500) {
-            message = `Galaxium's server ran into a problem (error ${res.status}). Please try again in a moment.`;
+            message = `Galaxium's server ran into a problem. Please try again in a moment.`;
+          } else if (res.status === 400) {
+            message = "The connection request was malformed. Try connecting again from Roblox Studio.";
+          } else if (res.status === 403) {
+            message = "You don't have permission to complete this connection. Make sure you're logged into the right account.";
+          } else if (res.status === 429) {
+            message = "Too many requests — please wait a moment before trying again.";
           } else {
-            message = `The plugin couldn't confirm the connection (error ${res.status}).`;
+            message = "Something went wrong on our end. Please try connecting again from Roblox Studio.";
           }
         }
         setErrorMessage(message);
-        setErrorDetail(`HTTP ${res.status}${result.error ? ` — ${result.error}` : ""}`);
+        // Show the raw status + any server message so devs can debug
+        setErrorDetail(
+          result.error
+            ? `HTTP ${res.status} — ${result.error}`
+            : `HTTP ${res.status}`
+        );
         setPhase("error");
         return;
       }
