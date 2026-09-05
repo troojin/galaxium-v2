@@ -160,6 +160,8 @@ export default function Topbar({ center, inProject }: TopbarProps) {
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
         .topbar-menu-item {
+          background: transparent;
+          color: #e5e5ea;
           transition: background 0.12s ease, color 0.12s ease;
         }
         .topbar-menu-item:hover {
@@ -259,9 +261,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    background: "transparent",
     border: "none",
-    color: "#e5e5ea",
     borderRadius: 8,
     padding: "9px 10px",
     fontSize: 13.5,
