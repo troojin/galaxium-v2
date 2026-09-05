@@ -931,8 +931,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 14,
     margin: 0,
   },
+  // No glow, no gradient — just a flat purple button
   newProjectBtn: {
-    background: "linear-gradient(160deg, rgba(124,77,225,0.85) 0%, rgba(91,33,182,0.85) 100%)",
+    background: "rgba(124,77,225,0.85)",
     color: "#ffffff",
     border: "1px solid rgba(255,255,255,0.12)",
     borderRadius: 10,
@@ -940,7 +941,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 14,
     fontWeight: 600,
     cursor: "pointer",
-    boxShadow: "0 4px 16px rgba(91,33,182,0.4), inset 0 0.5px 0 rgba(255,255,255,0.2)",
     transition: "filter 0.2s",
     whiteSpace: "nowrap",
   },
@@ -982,13 +982,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     whiteSpace: "nowrap",
     transition: "border-color 0.15s ease",
   },
+  // Matches the sort button background exactly
   sortDropdown: {
     position: "absolute",
     top: "calc(100% + 6px)",
     left: 0,
     minWidth: 190,
-    background: "linear-gradient(160deg, rgba(20,20,22,0.98) 0%, rgba(8,8,10,0.98) 100%)",
-    border: "1px solid rgba(255,255,255,0.1)",
+    background: "rgba(0,0,0,0.35)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    border: "1px solid rgba(255,255,255,0.08)",
     borderRadius: 10,
     padding: 5,
     zIndex: 50,
@@ -1105,20 +1108,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
     gap: 20,
   },
+  // Solid black cards
   card: {
     position: "relative",
-    background: "linear-gradient(160deg, rgba(12,12,14,0.7) 0%, rgba(0,0,0,0.65) 50%, rgba(6,6,8,0.7) 100%)",
+    background: "#000000",
     border: "1px solid rgba(255,255,255,0.07)",
     borderRadius: 16,
-    backdropFilter: "blur(24px) saturate(140%)",
-    WebkitBackdropFilter: "blur(24px) saturate(140%)",
     overflow: "visible",
     display: "flex",
     flexDirection: "column",
   },
   cardSelected: {
     borderColor: "rgba(139,92,246,0.5)",
-    background: "linear-gradient(160deg, rgba(139,92,246,0.08) 0%, rgba(0,0,0,0.65) 50%, rgba(6,6,8,0.7) 100%)",
+    background: "rgba(139,92,246,0.06)",
   },
   cardBody: {
     padding: "18px 22px 22px",
@@ -1160,13 +1162,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     background: "#8b5cf6",
     borderColor: "#8b5cf6",
   },
+  // Solid black list wrapper
   listWrap: {
     position: "relative",
-    background: "linear-gradient(160deg, rgba(12,12,14,0.7) 0%, rgba(0,0,0,0.65) 50%, rgba(6,6,8,0.7) 100%)",
+    background: "#000000",
     border: "1px solid rgba(255,255,255,0.07)",
     borderRadius: 16,
-    backdropFilter: "blur(24px) saturate(140%)",
-    WebkitBackdropFilter: "blur(24px) saturate(140%)",
     overflow: "visible",
   },
   listRow: {
