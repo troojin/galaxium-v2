@@ -230,7 +230,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     top: "calc(100% + 8px)",
     right: 0,
     minWidth: 200,
-    background: "linear-gradient(160deg, rgba(20,20,22,0.98) 0%, rgba(8,8,10,0.98) 100%)",
+    background: "#000000",
     border: "1px solid rgba(255,255,255,0.1)",
     borderRadius: 12,
     padding: 6,
