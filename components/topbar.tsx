@@ -107,7 +107,7 @@ export default function Topbar({ center, inProject }: TopbarProps) {
           onClick={() => setMenuOpen((prev) => !prev)}
           aria-label="Open menu"
         >
-          <HamburgerIcon />
+          <img src="/placeholder.png" alt="Profile" style={styles.avatarImg} />
         </button>
 
         {menuOpen && (
@@ -233,14 +233,20 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     padding: 0,
-    borderRadius: 8,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(255,255,255,0.06)",
-    color: "#e5e5ea",
+    borderRadius: "50%",
+    border: "2px solid rgba(255,255,255,0.14)",
+    background: "transparent",
     cursor: "pointer",
+    overflow: "hidden",
+  },
+  avatarImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    borderRadius: "50%",
   },
   dropdown: {
     position: "absolute",
