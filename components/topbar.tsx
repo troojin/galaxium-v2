@@ -89,7 +89,7 @@ export default function Topbar({ center, inProject }: TopbarProps) {
           onClick={() => setMenuOpen((prev) => !prev)}
           aria-label="Open menu"
         >
-          <img src="/placeholder.png" alt="Profile" style={styles.avatarImg} />
+          <img src="icons/placeholder.png" alt="Profile" style={styles.avatarImg} />
         </button>
 
         {menuOpen && (
