@@ -161,15 +161,36 @@ export default function Topbar({ center, inProject }: TopbarProps) {
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
         .topbar-menu-item {
-          transition: background 0.12s ease, color 0.12s ease;
+          position: relative;
+          transition: background 0.12s ease, color 0.12s ease, transform 0.1s ease;
         }
         .topbar-menu-item:hover {
-          background: rgba(255,255,255,0.06);
+          background: rgba(139,92,246,0.12);
           color: #c4b5fd;
+        }
+        .topbar-menu-item:hover::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 3px;
+          border-radius: 4px;
+          background: #8b5cf6;
+        }
+        .topbar-menu-item:active {
+          background: rgba(139,92,246,0.2);
+          transform: scale(0.98);
         }
         .topbar-menu-item-danger:hover {
           background: rgba(248,113,113,0.08);
           color: #f87171;
+        }
+        .topbar-menu-item-danger:hover::before {
+          background: #f87171;
+        }
+        .topbar-menu-item-danger:active {
+          background: rgba(248,113,113,0.15);
         }
       `}</style>
     </div>
