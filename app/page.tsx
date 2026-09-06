@@ -49,7 +49,6 @@ function ChevronIcon() {
   );
 }
 
-
 const ICONS: { [key: string]: () => React.JSX.Element } = {
   spark: SparkIcon,
   insert: InsertIcon,
@@ -62,7 +61,7 @@ const STEPS = landingData.steps;
 const FAQS = landingData.faqs;
 const TESTIMONIALS = testimonialsData;
 
-const MARQUEE_SPEED = 42; // px/sec — shared by both rows so they always match
+const MARQUEE_SPEED = 42;
 const MARQUEE_HOVER_MULTIPLIER = 0.28;
 
 function useMarquee(direction: 1 | -1, speed = MARQUEE_SPEED) {
@@ -79,8 +78,6 @@ function useMarquee(direction: 1 | -1, speed = MARQUEE_SPEED) {
       const dt = Math.min((time - lastTimeRef.current) / 1000, 0.1);
       lastTimeRef.current = time;
 
-      // ease the current speed toward its target every frame — this is the tween,
-      // so slowing down on hover glides instead of snapping to a new rate
       const ease = 1 - Math.pow(0.0005, dt);
       speedMultRef.current += (targetMultRef.current - speedMultRef.current) * ease;
 
@@ -139,6 +136,7 @@ export default function LandingPage() {
       isMounted = false;
     };
   }, [supabase]);
+
   useEffect(() => {
     const section = heroSectionRef.current;
     const video = heroVideoRef.current;
@@ -164,9 +162,12 @@ export default function LandingPage() {
       const rect = section.getBoundingClientRect();
       const sectionHeight = section.offsetHeight - window.innerHeight;
       if (sectionHeight <= 0) return;
+
       const progress = Math.min(1, Math.max(0, -rect.top / sectionHeight));
 
       video.currentTime = progress * video.duration;
+
+      const revealDistance = 0.25;
       const reveal = Math.min(1, progress / revealDistance);
 
       section.style.setProperty("--reveal-progress", reveal.toString());
@@ -183,7 +184,6 @@ export default function LandingPage() {
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
 
-    // In case metadata is already loaded by the time this effect runs.
     if (video.readyState >= 1) onLoadedMetadata();
 
     return () => {
@@ -367,7 +367,6 @@ export default function LandingPage() {
           transition: opacity 0.05s linear;
         }
         .hero-scrub-content {
-          /* Fades and lifts away as the video takes over. */
           opacity: calc(1 - var(--reveal-progress));
           transform: translateY(calc(var(--reveal-progress) * -40px)) scale(calc(1 - (0.06 * var(--reveal-progress))));
           transition: opacity 0.05s linear, transform 0.05s linear;
@@ -662,7 +661,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   heroScrubSection: {
     position: "relative",
-    height: "400vh", // scroll distance
+    height: "400vh",
   },
   heroScrubSticky: {
     position: "sticky",
