@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["26.216.5.113"],
   images: {
     loader: "custom",
-    loaderFile: "./src/lib/cdn.ts",
+    loaderFile: "./lib/cdn.ts",
     remotePatterns: [
       {
         protocol: "https",
