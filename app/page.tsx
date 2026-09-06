@@ -119,7 +119,8 @@ function useMarquee(direction: 1 | -1, speed = MARQUEE_SPEED) {
 
 export default function LandingPage() {
   const brandRef = useRef<HTMLDivElement>(null);
-  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const scrubSectionRef = useRef<HTMLElement>(null);
+  const scrubVideoRef = useRef<HTMLVideoElement>(null);
   const supabase = createClient();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -139,34 +140,61 @@ export default function LandingPage() {
     };
   }, [supabase]);
 
-  // Play the hero video only once it's scrolled into view; pause when it leaves.
+  // Pin the video full-screen while its section scrolls past, and scrub
+  // currentTime directly from scroll position (video plays forward as you
+  // scroll down through the section, and stays in sync if you scroll back up).
   useEffect(() => {
-    const video = heroVideoRef.current;
-    if (!video) return;
+    const section = scrubSectionRef.current;
+    const video = scrubVideoRef.current;
+    if (!section || !video) return;
 
     const prefersReducedMotion =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     if (prefersReducedMotion) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            video.play().catch(() => {
-              // Autoplay can be blocked until the user interacts with the page — safe to ignore.
-            });
-          } else {
-            video.pause();
-          }
-        });
-      },
-      { threshold: 0.25 }
-    );
+    let rafId: number | null = null;
+    let ready = false;
 
-    observer.observe(video);
-    return () => observer.disconnect();
+    function onLoadedMetadata() {
+      ready = true;
+      updateFrame();
+    }
+
+    function updateFrame() {
+      rafId = null;
+      if (!ready || !section || !video || !video.duration) return;
+
+      const rect = section.getBoundingClientRect();
+      const sectionHeight = section.offsetHeight - window.innerHeight;
+      if (sectionHeight <= 0) return;
+
+      // 0 when the section's top just reaches the top of the viewport,
+      // 1 when the section has scrolled a full viewport-height past that.
+      const progress = Math.min(1, Math.max(0, -rect.top / sectionHeight));
+
+      video.currentTime = progress * video.duration;
+    }
+
+    function onScroll() {
+      if (rafId == null) {
+        rafId = requestAnimationFrame(updateFrame);
+      }
+    }
+
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+
+    // In case metadata is already loaded by the time this effect runs.
+    if (video.readyState >= 1) onLoadedMetadata();
+
+    return () => {
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (rafId != null) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   function handleCardMouseMove(e: React.MouseEvent<HTMLDivElement>) {
@@ -358,40 +386,40 @@ export default function LandingPage() {
 
       <main style={styles.main}>
         <section style={styles.hero}>
-          <video
-            ref={heroVideoRef}
-            src="/cdn/Galaxy.mp4"
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            style={styles.heroVideo}
-          />
-          <div style={styles.heroOverlay} />
+          <h1 className="fade-up" style={styles.title}>
+            Describe it. Watch it build itself in Studio.
+          </h1>
+          <p className="fade-up" style={{ ...styles.subtitle, animationDelay: "0.05s" }}>
+            Galaxium turns plain-English requests into real Roblox instances and
+            working Luau scripts, then drops them into your place automatically
+            while you're still typing the next message.
+          </p>
+          <div className="fade-up" style={{ ...styles.heroCtas, animationDelay: "0.1s" }}>
+            <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
+              Start Building
+            </Link>
+            <a
+              href="https://dsc.gg/glxm"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ghost-btn"
+              style={styles.ghostBtn}
+            >
+              Join our Discord
+            </a>
+          </div>
+        </section>
 
-          <div style={styles.heroContent}>
-            <h1 className="fade-up" style={styles.title}>
-              Describe it. Watch it build itself in Studio.
-            </h1>
-            <p className="fade-up" style={{ ...styles.subtitle, animationDelay: "0.05s" }}>
-              Galaxium turns plain-English requests into real Roblox instances and
-              working Luau scripts, then drops them into your place automatically
-              while you're still typing the next message.
-            </p>
-            <div className="fade-up" style={{ ...styles.heroCtas, animationDelay: "0.1s" }}>
-              <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
-                Start Building
-              </Link>
-              <a
-                href="https://dsc.gg/glxm"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ghost-btn"
-                style={styles.ghostBtn}
-              >
-                Join our Discord
-              </a>
-            </div>
+        <section ref={scrubSectionRef} style={styles.scrubSection}>
+          <div style={styles.scrubSticky}>
+            <video
+              ref={scrubVideoRef}
+              src="/cdn/Galaxy.mp4"
+              muted
+              playsInline
+              preload="auto"
+              style={styles.scrubVideo}
+            />
           </div>
         </section>
 
@@ -608,36 +636,31 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   hero: {
     position: "relative",
-    maxWidth: "100%",
+    maxWidth: 720,
     margin: "0 auto",
     padding: "96px 24px 80px",
     textAlign: "center",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
+  },
+  scrubSection: {
+    position: "relative",
+    height: "300vh", // scroll distance the video plays across — increase for a slower scrub
+  },
+  scrubSticky: {
+    position: "sticky",
+    top: 0,
+    height: "100vh",
+    width: "100%",
     overflow: "hidden",
   },
-  heroVideo: {
+  scrubVideo: {
     position: "absolute",
     inset: 0,
     width: "100%",
     height: "100%",
     objectFit: "cover",
-    zIndex: 0,
-  },
-  heroOverlay: {
-    position: "absolute",
-    inset: 0,
-    background: "rgba(10,10,10,0.6)",
-    zIndex: 0,
-  },
-  heroContent: {
-    position: "relative",
-    zIndex: 1,
-    maxWidth: 720,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
   },
   title: {
     color: "#ffffff",
