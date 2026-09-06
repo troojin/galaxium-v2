@@ -380,14 +380,6 @@ export async function POST(req: NextRequest) {
         }
       );
     }
-
-    // Compact old assistant turns before sending them to the model as history.
-    // Full script sources and large instance trees in PAST turns are replaced
-    // with short placeholders — the model doesn't need to re-read every script
-    // it already wrote on every subsequent request, and this keeps token usage
-    // from growing unbounded as a session goes on. The full untouched content
-    // is still what's persisted to Supabase and sent to the plugin below, so
-    // nothing about what actually gets applied in Studio changes.
     const historyForModel: ChatMessage[] = trimmed.map((message) => {
       if (message.role !== "assistant") return message;
       return {
