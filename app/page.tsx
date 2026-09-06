@@ -171,11 +171,11 @@ export default function LandingPage() {
       const holdEnd = 0.97;
       let heroMove;
       if (progress <= slideInEnd) {
-        heroMove = (progress / slideInEnd) * 0.5;
+        heroMove = -1 + (progress / slideInEnd);
       } else if (progress <= holdEnd) {
-        heroMove = 0.5;
+        heroMove = 0;
       } else {
-        heroMove = 0.5 + ((progress - holdEnd) / (1 - holdEnd)) * 0.5;
+        heroMove = ((progress - holdEnd) / (1 - holdEnd));
       }
 
       section.style.setProperty("--hero-move", heroMove.toString());
@@ -363,7 +363,7 @@ export default function LandingPage() {
 
         .hero-scrub-section {
           --scroll-progress: 0;
-          --hero-move: 0;
+          --hero-move: -1;
         }
         .hero-scrub-video {
           opacity: 1;
