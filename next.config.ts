@@ -7,10 +7,18 @@ const cdnOrigin = (
 ).replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ['26.216.5.113'],
-  // Keep local development self-contained; production scripts and static chunks
-  // are served from the Cloudflare custom domain.
-  assetPrefix: process.env.NODE_ENV === "production" ? cdnOrigin : undefined,
+  allowedDevOrigins: ["26.216.5.113"],
+  images: {
+    loader: "custom",
+    loaderFile: "./src/lib/cdn.ts",
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "galaxium-cdn.troojin.com",
+        pathname: "/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
