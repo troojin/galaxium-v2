@@ -152,6 +152,8 @@ export default function LandingPage() {
     let rafId: number | null = null;
     let ready = false;
     let startOffsetPx = 0;
+    let lastSeekTime = -1;
+    let scrollEndTimeout: ReturnType<typeof setTimeout> | null = null;
 
     function measureStartOffset() {
       if (!content) return;
@@ -179,8 +181,12 @@ export default function LandingPage() {
       if (sectionHeight <= 0) return;
 
       const progress = Math.min(1, Math.max(0, -rect.top / sectionHeight));
+      const targetTime = progress * video.duration;
 
-      video.currentTime = progress * video.duration;
+      if (Math.abs(targetTime - lastSeekTime) > 0.008) {
+        video.currentTime = targetTime;
+        lastSeekTime = targetTime;
+      }
 
       const slideInEnd = 0.15;
       let heroMove;
@@ -194,10 +200,21 @@ export default function LandingPage() {
       section.style.setProperty("--scroll-progress", progress.toString());
     }
 
-    function onScroll() {
+    function scheduleFrame() {
       if (rafId == null) {
         rafId = requestAnimationFrame(updateFrame);
       }
+    }
+
+    function onScroll() {
+      scheduleFrame();
+      // Keep sampling scroll position for a short burst after each event so
+      // a fast fling (many scroll pixels in one event) still gets several
+      // in-between seeks instead of jumping straight to the final frame.
+      if (scrollEndTimeout) clearTimeout(scrollEndTimeout);
+      scrollEndTimeout = setTimeout(() => {
+        scheduleFrame();
+      }, 50);
     }
 
     function onResize() {
@@ -218,6 +235,7 @@ export default function LandingPage() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
       if (rafId != null) cancelAnimationFrame(rafId);
+      if (scrollEndTimeout) clearTimeout(scrollEndTimeout);
     };
   }, []);
 
@@ -347,6 +365,31 @@ export default function LandingPage() {
           .steps-grid { grid-template-columns: 1fr !important; }
         }
 
+        @media (max-width: 640px) {
+          .topbar { padding: 10px 16px; }
+
+          .hero-title { font-size: 30px !important; line-height: 1.18 !important; }
+          .hero-subtitle { font-size: 14px !important; padding: 0 4px; }
+
+          .hero-scrub-content { padding: 0 18px !important; }
+
+          .section-heading { font-size: 22px !important; }
+          .section-pad { padding: 44px 18px !important; }
+
+          .feature-card {
+            padding: 18px 16px !important;
+          }
+
+          .testimonial-card {
+            width: 240px !important;
+          }
+        }
+
+        @media (max-width: 400px) {
+          .hero-title { font-size: 25px !important; }
+          .nav-link { display: none; }
+        }
+
         .testimonials-marquee {
           overflow: hidden;
           -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
@@ -400,7 +443,7 @@ export default function LandingPage() {
         }
       `}</style>
 
-      <div style={styles.topbar}>
+      <div className="topbar" style={styles.topbar}>
         <div ref={brandRef} style={styles.brandWrap}>
           <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIconImg} />
           <span style={styles.brandInlineText}>
@@ -440,12 +483,13 @@ export default function LandingPage() {
               style={styles.heroScrubVideo}
             />
             <div className="hero-scrub-overlay" style={styles.heroScrubOverlay} />
+            <div className="hero-scrub-bottom-fade" style={styles.heroScrubBottomFade} />
 
             <div ref={heroContentRef} className="hero-scrub-content" style={styles.heroScrubContent}>
-              <h1 className="fade-up" style={styles.title}>
+              <h1 className="fade-up hero-title" style={styles.title}>
                 Describe it. Watch it build itself in Studio.
               </h1>
-              <p className="fade-up" style={{ ...styles.subtitle, animationDelay: "0.05s" }}>
+              <p className="fade-up hero-subtitle" style={{ ...styles.subtitle, animationDelay: "0.05s" }}>
                 Galaxium turns plain-English requests into real Roblox instances and
                 working Luau scripts, then drops them into your place automatically
                 while you're still typing the next message.
@@ -468,9 +512,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section style={styles.section}>
+        <section className="section-pad" style={styles.section}>
           <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>Built for how you actually build in Studio</h2>
+            <h2 className="section-heading" style={styles.sectionTitle}>Built for how you actually build in Studio</h2>
           </div>
           <div className="features-grid" style={styles.featuresGrid}>
             {FEATURES.map((f, i) => {
@@ -495,9 +539,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section style={styles.section}>
+        <section className="section-pad" style={styles.section}>
           <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>From idea to instance in three steps</h2>
+            <h2 className="section-heading" style={styles.sectionTitle}>From idea to instance in three steps</h2>
           </div>
           <div className="steps-grid" style={styles.stepsGrid}>
             {STEPS.map((s, i) => (
@@ -516,9 +560,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section style={styles.section}>
+        <section className="section-pad" style={styles.section}>
           <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>Questions people usually ask</h2>
+            <h2 className="section-heading" style={styles.sectionTitle}>Questions people usually ask</h2>
           </div>
           <div style={styles.faqList}>
             {FAQS.map((item, i) => {
@@ -557,9 +601,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section style={styles.sectionNoPaddingBottom}>
+        <section className="section-pad" style={styles.sectionNoPaddingBottom}>
           <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>What builders are saying</h2>
+            <h2 className="section-heading" style={styles.sectionTitle}>What builders are saying</h2>
           </div>
         </section>
 
@@ -704,6 +748,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     position: "absolute",
     inset: 0,
     background: "#0a0a0a",
+  },
+  heroScrubBottomFade: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "22vh",
+    background: "linear-gradient(to bottom, rgba(10,10,10,0) 0%, rgba(10,10,10,1) 100%)",
+    pointerEvents: "none",
   },
   heroScrubContent: {
     position: "relative",
