@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { cdnAsset } from "@/lib/cdn";
 import landingData from "@/data/landing.json";
 import testimonialsData from "@/data/testimonials.json";
 
@@ -140,7 +141,7 @@ export default function LandingPage() {
 
   const FRAME_COUNT = 191;
   const framePath = (i: number) =>
-    `/cdn/galaxy-frames/frame_${String(i).padStart(4, "0")}.jpg`;
+    cdnAsset(`/cdn/galaxy-frames/frame_${String(i).padStart(4, "0")}.jpg`);
 
   useEffect(() => {
     const section = heroSectionRef.current;
@@ -485,7 +486,7 @@ export default function LandingPage() {
 
       <div className="topbar" style={styles.topbar}>
         <div ref={brandRef} style={styles.brandWrap}>
-          <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIconImg} />
+          <img src={cdnAsset("/icons/icon.png")} alt="Galaxium" style={styles.brandIconImg} />
           <span style={styles.brandInlineText}>
             Galaxium <span className="rainbow-v2" style={styles.rainbowV2}>V2</span>
           </span>

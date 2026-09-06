@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { cdnAsset } from "@/lib/cdn";
 
 function GearIcon() {
   return (
@@ -73,7 +74,7 @@ export default function Topbar({ center, inProject }: TopbarProps) {
   return (
     <div style={styles.topbar}>
       <div style={styles.brandWrap} onClick={() => router.push("/dashboard")}>
-        <img src="/icons/icon.png" alt="Galaxium" style={styles.brandIconImg} />
+        <img src={cdnAsset("/icons/icon.png")} alt="Galaxium" style={styles.brandIconImg} />
         <span style={styles.brandInlineText}>
           Galaxium <span className="rainbow-v2" style={styles.rainbowV2}>V2</span>
         </span>
@@ -89,7 +90,7 @@ export default function Topbar({ center, inProject }: TopbarProps) {
           onClick={() => setMenuOpen((prev) => !prev)}
           aria-label="Open menu"
         >
-          <img src="icons/placeholder.png" alt="Profile" style={styles.avatarImg} />
+          <img src={cdnAsset("/icons/placeholder.png")} alt="Profile" style={styles.avatarImg} />
         </button>
 
         {menuOpen && (
