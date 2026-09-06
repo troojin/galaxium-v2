@@ -119,6 +119,7 @@ function useMarquee(direction: 1 | -1, speed = MARQUEE_SPEED) {
 
 export default function LandingPage() {
   const brandRef = useRef<HTMLDivElement>(null);
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
   const supabase = createClient();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -137,6 +138,36 @@ export default function LandingPage() {
       isMounted = false;
     };
   }, [supabase]);
+
+  // Play the hero video only once it's scrolled into view; pause when it leaves.
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video) return;
+
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReducedMotion) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            video.play().catch(() => {
+              // Autoplay can be blocked until the user interacts with the page — safe to ignore.
+            });
+          } else {
+            video.pause();
+          }
+        });
+      },
+      { threshold: 0.25 }
+    );
+
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, []);
 
   function handleCardMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const card = e.currentTarget;
@@ -327,27 +358,40 @@ export default function LandingPage() {
 
       <main style={styles.main}>
         <section style={styles.hero}>
-          <h1 className="fade-up" style={styles.title}>
-            Describe it. Watch it build itself in Studio.
-          </h1>
-          <p className="fade-up" style={{ ...styles.subtitle, animationDelay: "0.05s" }}>
-            Galaxium turns plain-English requests into real Roblox instances and
-            working Luau scripts, then drops them into your place automatically
-            while you're still typing the next message.
-          </p>
-          <div className="fade-up" style={{ ...styles.heroCtas, animationDelay: "0.1s" }}>
-            <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
-              Start Building
-            </Link>
-            <a
-              href="https://dsc.gg/glxm"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ghost-btn"
-              style={styles.ghostBtn}
-            >
-              Join our Discord
-            </a>
+          <video
+            ref={heroVideoRef}
+            src="/cdn/Galaxy.mp4"
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            style={styles.heroVideo}
+          />
+          <div style={styles.heroOverlay} />
+
+          <div style={styles.heroContent}>
+            <h1 className="fade-up" style={styles.title}>
+              Describe it. Watch it build itself in Studio.
+            </h1>
+            <p className="fade-up" style={{ ...styles.subtitle, animationDelay: "0.05s" }}>
+              Galaxium turns plain-English requests into real Roblox instances and
+              working Luau scripts, then drops them into your place automatically
+              while you're still typing the next message.
+            </p>
+            <div className="fade-up" style={{ ...styles.heroCtas, animationDelay: "0.1s" }}>
+              <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
+                Start Building
+              </Link>
+              <a
+                href="https://dsc.gg/glxm"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ghost-btn"
+                style={styles.ghostBtn}
+              >
+                Join our Discord
+              </a>
+            </div>
           </div>
         </section>
 
@@ -564,10 +608,33 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   hero: {
     position: "relative",
-    maxWidth: 720,
+    maxWidth: "100%",
     margin: "0 auto",
     padding: "96px 24px 80px",
     textAlign: "center",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  heroVideo: {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    zIndex: 0,
+  },
+  heroOverlay: {
+    position: "absolute",
+    inset: 0,
+    background: "rgba(10,10,10,0.6)",
+    zIndex: 0,
+  },
+  heroContent: {
+    position: "relative",
+    zIndex: 1,
+    maxWidth: 720,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
