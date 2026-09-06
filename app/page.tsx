@@ -119,8 +119,8 @@ function useMarquee(direction: 1 | -1, speed = MARQUEE_SPEED) {
 
 export default function LandingPage() {
   const brandRef = useRef<HTMLDivElement>(null);
-  const scrubSectionRef = useRef<HTMLElement>(null);
-  const scrubVideoRef = useRef<HTMLVideoElement>(null);
+  const heroSectionRef = useRef<HTMLElement>(null);
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
   const supabase = createClient();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -140,12 +140,17 @@ export default function LandingPage() {
     };
   }, [supabase]);
 
-  // Pin the video full-screen while its section scrolls past, and scrub
-  // currentTime directly from scroll position (video plays forward as you
-  // scroll down through the section, and stays in sync if you scroll back up).
+  // Single merged hero+video moment:
+  // - Hero starts in normal top-of-page position.
+  // - As the user scrolls through this section, the video fades in as a
+  //   full-screen background and its currentTime is scrubbed by scroll
+  //   progress (0 -> 1), while the hero content animates/settles into the
+  //   vertical center and stays pinned there.
+  // - Once progress reaches 1 (video fully scrubbed), the section unpins
+  //   and the page continues normally.
   useEffect(() => {
-    const section = scrubSectionRef.current;
-    const video = scrubVideoRef.current;
+    const section = heroSectionRef.current;
+    const video = heroVideoRef.current;
     if (!section || !video) return;
 
     const prefersReducedMotion =
@@ -170,10 +175,14 @@ export default function LandingPage() {
       if (sectionHeight <= 0) return;
 
       // 0 when the section's top just reaches the top of the viewport,
-      // 1 when the section has scrolled a full viewport-height past that.
+      // 1 once you've scrolled a full viewport-height further.
       const progress = Math.min(1, Math.max(0, -rect.top / sectionHeight));
 
       video.currentTime = progress * video.duration;
+
+      // Drive the hero-to-center + video-fade-in animation via a CSS
+      // variable so we don't re-render React on every scroll frame.
+      section.style.setProperty("--scroll-progress", progress.toString());
     }
 
     function onScroll() {
@@ -355,6 +364,30 @@ export default function LandingPage() {
           .faq-answer-wrap { transition: none !important; }
           .testimonials-track { animation: none !important; }
         }
+
+        .hero-scrub-section {
+          --scroll-progress: 0;
+        }
+        .hero-scrub-video {
+          opacity: var(--scroll-progress);
+          transition: opacity 0.05s linear;
+        }
+        .hero-scrub-overlay {
+          opacity: calc(var(--scroll-progress) * 0.6);
+          transition: opacity 0.05s linear;
+        }
+        .hero-scrub-content {
+          /* Starts at the hero's natural top position, settles into the
+             vertical center of the viewport as scroll progress goes 0 -> 1. */
+          transform: translateY(calc(var(--scroll-progress) * (50vh - 50% - 96px)));
+          transition: transform 0.05s linear;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .hero-scrub-video { opacity: 1 !important; transition: none !important; }
+          .hero-scrub-overlay { opacity: 0.6 !important; transition: none !important; }
+          .hero-scrub-content { transform: none !important; transition: none !important; }
+        }
       `}</style>
 
       <div style={styles.topbar}>
@@ -385,41 +418,43 @@ export default function LandingPage() {
       </div>
 
       <main style={styles.main}>
-        <section style={styles.hero}>
-          <h1 className="fade-up" style={styles.title}>
-            Describe it. Watch it build itself in Studio.
-          </h1>
-          <p className="fade-up" style={{ ...styles.subtitle, animationDelay: "0.05s" }}>
-            Galaxium turns plain-English requests into real Roblox instances and
-            working Luau scripts, then drops them into your place automatically
-            while you're still typing the next message.
-          </p>
-          <div className="fade-up" style={{ ...styles.heroCtas, animationDelay: "0.1s" }}>
-            <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
-              Start Building
-            </Link>
-            <a
-              href="https://dsc.gg/glxm"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ghost-btn"
-              style={styles.ghostBtn}
-            >
-              Join our Discord
-            </a>
-          </div>
-        </section>
-
-        <section ref={scrubSectionRef} style={styles.scrubSection}>
-          <div style={styles.scrubSticky}>
+        <section ref={heroSectionRef} className="hero-scrub-section" style={styles.heroScrubSection}>
+          <div style={styles.heroScrubSticky}>
             <video
-              ref={scrubVideoRef}
+              ref={heroVideoRef}
+              className="hero-scrub-video"
               src="/cdn/Galaxy.mp4"
               muted
               playsInline
               preload="auto"
-              style={styles.scrubVideo}
+              style={styles.heroScrubVideo}
             />
+            <div className="hero-scrub-overlay" style={styles.heroScrubOverlay} />
+
+            <div className="hero-scrub-content" style={styles.heroScrubContent}>
+              <h1 className="fade-up" style={styles.title}>
+                Describe it. Watch it build itself in Studio.
+              </h1>
+              <p className="fade-up" style={{ ...styles.subtitle, animationDelay: "0.05s" }}>
+                Galaxium turns plain-English requests into real Roblox instances and
+                working Luau scripts, then drops them into your place automatically
+                while you're still typing the next message.
+              </p>
+              <div className="fade-up" style={{ ...styles.heroCtas, animationDelay: "0.1s" }}>
+                <Link href="/dashboard" className="primary-btn" style={styles.submitBtn}>
+                  Start Building
+                </Link>
+                <a
+                  href="https://dsc.gg/glxm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ghost-btn"
+                  style={styles.ghostBtn}
+                >
+                  Join our Discord
+                </a>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -634,33 +669,41 @@ const styles: { [key: string]: React.CSSProperties } = {
     zIndex: 1,
     flex: 1,
   },
-  hero: {
+  heroScrubSection: {
     position: "relative",
-    maxWidth: 720,
-    margin: "0 auto",
-    padding: "96px 24px 80px",
-    textAlign: "center",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
+    height: "400vh", // total scroll distance for the whole moment — increase to slow it down
   },
-  scrubSection: {
-    position: "relative",
-    height: "300vh", // scroll distance the video plays across — increase for a slower scrub
-  },
-  scrubSticky: {
+  heroScrubSticky: {
     position: "sticky",
     top: 0,
     height: "100vh",
     width: "100%",
     overflow: "hidden",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  scrubVideo: {
+  heroScrubVideo: {
     position: "absolute",
     inset: 0,
     width: "100%",
     height: "100%",
     objectFit: "cover",
+  },
+  heroScrubOverlay: {
+    position: "absolute",
+    inset: 0,
+    background: "#0a0a0a",
+  },
+  heroScrubContent: {
+    position: "relative",
+    zIndex: 1,
+    maxWidth: 720,
+    padding: "0 24px",
+    textAlign: "center",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
   },
   title: {
     color: "#ffffff",
