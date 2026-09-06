@@ -117,7 +117,7 @@ function useMarquee(direction: 1 | -1, speed = MARQUEE_SPEED) {
 export default function LandingPage() {
   const brandRef = useRef<HTMLDivElement>(null);
   const heroSectionRef = useRef<HTMLElement>(null);
-  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const heroCanvasRef = useRef<HTMLCanvasElement>(null);
   const heroContentRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -138,22 +138,28 @@ export default function LandingPage() {
     };
   }, [supabase]);
 
+  const FRAME_COUNT = 191;
+  const framePath = (i: number) =>
+    `/cdn/galaxy-frames/frame_${String(i).padStart(4, "0")}.jpg`;
+
   useEffect(() => {
     const section = heroSectionRef.current;
-    const video = heroVideoRef.current;
+    const canvas = heroCanvasRef.current;
     const content = heroContentRef.current;
-    if (!section || !video || !content) return;
+    if (!section || !canvas || !content) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
     const prefersReducedMotion =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) return;
 
     let rafId: number | null = null;
-    let ready = false;
     let startOffsetPx = 0;
-    let lastSeekTime = -1;
-    let scrollEndTimeout: ReturnType<typeof setTimeout> | null = null;
+    let currentFrameIndex = -1;
+    let loadedCount = 0;
+    const images: HTMLImageElement[] = new Array(FRAME_COUNT);
 
     function measureStartOffset() {
       if (!content) return;
@@ -167,26 +173,57 @@ export default function LandingPage() {
       startOffsetPx = contentCenter - viewportCenter;
     }
 
-    function onLoadedMetadata() {
-      ready = true;
-      updateFrame();
+    function resizeCanvas() {
+      if (!canvas) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      drawFrame(Math.max(currentFrameIndex, 0), true);
+    }
+
+    function drawFrame(index: number, force = false) {
+      if (!ctx || !canvas) return;
+      const clamped = Math.max(0, Math.min(FRAME_COUNT - 1, index));
+      if (clamped === currentFrameIndex && !force) return;
+
+      const img = images[clamped];
+      if (!img || !img.complete || img.naturalWidth === 0) return;
+
+      currentFrameIndex = clamped;
+
+      const canvasRatio = canvas.width / canvas.height;
+      const imgRatio = img.naturalWidth / img.naturalHeight;
+      let drawWidth = canvas.width;
+      let drawHeight = canvas.height;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (imgRatio > canvasRatio) {
+        drawHeight = canvas.height;
+        drawWidth = drawHeight * imgRatio;
+        offsetX = (canvas.width - drawWidth) / 2;
+      } else {
+        drawWidth = canvas.width;
+        drawHeight = drawWidth / imgRatio;
+        offsetY = (canvas.height - drawHeight) / 2;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
     }
 
     function updateFrame() {
       rafId = null;
-      if (!ready || !section || !video || !video.duration) return;
+      if (!section) return;
 
       const rect = section.getBoundingClientRect();
       const sectionHeight = section.offsetHeight - window.innerHeight;
       if (sectionHeight <= 0) return;
 
       const progress = Math.min(1, Math.max(0, -rect.top / sectionHeight));
-      const targetTime = progress * video.duration;
 
-      if (Math.abs(targetTime - lastSeekTime) > 0.008) {
-        video.currentTime = targetTime;
-        lastSeekTime = targetTime;
-      }
+      const targetFrame = Math.round(progress * (FRAME_COUNT - 1));
+      drawFrame(targetFrame);
 
       const slideInEnd = 0.15;
       let heroMove;
@@ -208,34 +245,37 @@ export default function LandingPage() {
 
     function onScroll() {
       scheduleFrame();
-      // Keep sampling scroll position for a short burst after each event so
-      // a fast fling (many scroll pixels in one event) still gets several
-      // in-between seeks instead of jumping straight to the final frame.
-      if (scrollEndTimeout) clearTimeout(scrollEndTimeout);
-      scrollEndTimeout = setTimeout(() => {
-        scheduleFrame();
-      }, 50);
     }
 
     function onResize() {
       measureStartOffset();
-      onScroll();
+      resizeCanvas();
+      scheduleFrame();
     }
 
     measureStartOffset();
+    resizeCanvas();
     section.style.setProperty("--hero-move-px", startOffsetPx.toString());
-    video.addEventListener("loadedmetadata", onLoadedMetadata);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onResize);
 
-    if (video.readyState >= 1) onLoadedMetadata();
+    for (let i = 0; i < FRAME_COUNT; i++) {
+      const img = new Image();
+      img.src = framePath(i);
+      img.onload = () => {
+        loadedCount++;
+        if (i === 0) drawFrame(0, true);
+      };
+      images[i] = img;
+    }
+
+    if (!prefersReducedMotion) {
+      window.addEventListener("scroll", onScroll, { passive: true });
+      window.addEventListener("resize", onResize);
+    }
 
     return () => {
-      video.removeEventListener("loadedmetadata", onLoadedMetadata);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
       if (rafId != null) cancelAnimationFrame(rafId);
-      if (scrollEndTimeout) clearTimeout(scrollEndTimeout);
     };
   }, []);
 
@@ -473,13 +513,9 @@ export default function LandingPage() {
       <main style={styles.main}>
         <section ref={heroSectionRef} className="hero-scrub-section" style={styles.heroScrubSection}>
           <div style={styles.heroScrubSticky}>
-            <video
-              ref={heroVideoRef}
+            <canvas
+              ref={heroCanvasRef}
               className="hero-scrub-video"
-              src="/cdn/Galaxy.mp4"
-              muted
-              playsInline
-              preload="auto"
               style={styles.heroScrubVideo}
             />
             <div className="hero-scrub-overlay" style={styles.heroScrubOverlay} />
