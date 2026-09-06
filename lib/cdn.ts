@@ -29,6 +29,17 @@ export function cdnImageUrl(src: string): string {
   return `${CDN_ORIGIN}${cleanSrc}`;
 }
 
+export function cdnAsset(src: string): string {
+  if (!src) return src;
+
+  if (src.startsWith("http://") || src.startsWith("https://")) {
+    return src;
+  }
+
+  const cleanSrc = src.startsWith("/") ? src : `/${src}`;
+  return `${CDN_ORIGIN}${cleanSrc}`;
+}
+
 export default function cdnLoader({
   src,
   width,
