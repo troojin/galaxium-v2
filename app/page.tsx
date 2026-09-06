@@ -139,15 +139,6 @@ export default function LandingPage() {
       isMounted = false;
     };
   }, [supabase]);
-
-  // Single merged hero+video moment:
-  // - Hero starts in normal top-of-page position.
-  // - As the user scrolls through this section, the video fades in as a
-  //   full-screen background and its currentTime is scrubbed by scroll
-  //   progress (0 -> 1), while the hero content animates/settles into the
-  //   vertical center and stays pinned there.
-  // - Once progress reaches 1 (video fully scrubbed), the section unpins
-  //   and the page continues normally.
   useEffect(() => {
     const section = heroSectionRef.current;
     const video = heroVideoRef.current;
@@ -173,15 +164,12 @@ export default function LandingPage() {
       const rect = section.getBoundingClientRect();
       const sectionHeight = section.offsetHeight - window.innerHeight;
       if (sectionHeight <= 0) return;
-
-      // 0 when the section's top just reaches the top of the viewport,
-      // 1 once you've scrolled a full viewport-height further.
       const progress = Math.min(1, Math.max(0, -rect.top / sectionHeight));
 
       video.currentTime = progress * video.duration;
+      const reveal = Math.min(1, progress / revealDistance);
 
-      // Drive the hero-to-center + video-fade-in animation via a CSS
-      // variable so we don't re-render React on every scroll frame.
+      section.style.setProperty("--reveal-progress", reveal.toString());
       section.style.setProperty("--scroll-progress", progress.toString());
     }
 
@@ -367,26 +355,29 @@ export default function LandingPage() {
 
         .hero-scrub-section {
           --scroll-progress: 0;
+          --reveal-progress: 0;
         }
         .hero-scrub-video {
-          opacity: var(--scroll-progress);
-          transition: opacity 0.05s linear;
+          opacity: var(--reveal-progress);
+          transform: scale(calc(1.08 - (0.08 * var(--reveal-progress))));
+          transition: opacity 0.05s linear, transform 0.05s linear;
         }
         .hero-scrub-overlay {
-          opacity: calc(var(--scroll-progress) * 0.6);
+          opacity: calc(var(--reveal-progress) * 0.55);
           transition: opacity 0.05s linear;
         }
         .hero-scrub-content {
-          /* Starts at the hero's natural top position, settles into the
-             vertical center of the viewport as scroll progress goes 0 -> 1. */
-          transform: translateY(calc(var(--scroll-progress) * (50vh - 50% - 96px)));
-          transition: transform 0.05s linear;
+          /* Fades and lifts away as the video takes over. */
+          opacity: calc(1 - var(--reveal-progress));
+          transform: translateY(calc(var(--reveal-progress) * -40px)) scale(calc(1 - (0.06 * var(--reveal-progress))));
+          transition: opacity 0.05s linear, transform 0.05s linear;
+          pointer-events: none;
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .hero-scrub-video { opacity: 1 !important; transition: none !important; }
-          .hero-scrub-overlay { opacity: 0.6 !important; transition: none !important; }
-          .hero-scrub-content { transform: none !important; transition: none !important; }
+          .hero-scrub-video { opacity: 1 !important; transform: none !important; transition: none !important; }
+          .hero-scrub-overlay { opacity: 0.55 !important; transition: none !important; }
+          .hero-scrub-content { opacity: 1 !important; transform: none !important; transition: none !important; }
         }
       `}</style>
 
@@ -671,7 +662,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   heroScrubSection: {
     position: "relative",
-    height: "400vh", // total scroll distance for the whole moment — increase to slow it down
+    height: "400vh", // scroll distance
   },
   heroScrubSticky: {
     position: "sticky",
