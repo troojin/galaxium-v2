@@ -1,6 +1,7 @@
 import React from "react";
+import { cdnAsset } from "@/lib/cdn";
 
-const ICON_BASE = "/assistant/StudioIcons";
+const ICON_BASE = cdnAsset("/assistant/StudioIcons");
 const FALLBACK_ICON = "Instance";
 
 export function getStudioIconPath(className: string): string {

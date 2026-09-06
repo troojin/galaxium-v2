@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ToastProvider } from "@/components/toast";
 import { keywords } from "@/lib/keywords";
+import { cdnAsset } from "@/lib/cdn";
 
 export const metadata: Metadata = {
   title: "Galaxium",
   description: '"Galactic" AI',
   keywords: keywords,
+  icons: {
+    icon: cdnAsset("/icons/favicon-32x32.png"),
+    apple: cdnAsset("/icons/apple-touch-icon.png"),
+  },
 };
 
 export default function RootLayout({
