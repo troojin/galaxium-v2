@@ -118,6 +118,7 @@ export default function LandingPage() {
   const brandRef = useRef<HTMLDivElement>(null);
   const heroSectionRef = useRef<HTMLElement>(null);
   const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const heroContentRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -140,7 +141,8 @@ export default function LandingPage() {
   useEffect(() => {
     const section = heroSectionRef.current;
     const video = heroVideoRef.current;
-    if (!section || !video) return;
+    const content = heroContentRef.current;
+    if (!section || !video || !content) return;
 
     const prefersReducedMotion =
       typeof window !== "undefined" &&
@@ -149,6 +151,19 @@ export default function LandingPage() {
 
     let rafId: number | null = null;
     let ready = false;
+    let startOffsetPx = 0;
+
+    function measureStartOffset() {
+      if (!content) return;
+      const originalTransform = content.style.transform;
+      content.style.transform = "none";
+      const rect = content.getBoundingClientRect();
+      content.style.transform = originalTransform;
+
+      const contentCenter = rect.top + rect.height / 2;
+      const viewportCenter = window.innerHeight / 2;
+      startOffsetPx = contentCenter - viewportCenter;
+    }
 
     function onLoadedMetadata() {
       ready = true;
@@ -168,17 +183,14 @@ export default function LandingPage() {
       video.currentTime = progress * video.duration;
 
       const slideInEnd = 0.15;
-      const holdEnd = 0.97;
       let heroMove;
       if (progress <= slideInEnd) {
-        heroMove = -1 + (progress / slideInEnd);
-      } else if (progress <= holdEnd) {
-        heroMove = 0;
+        heroMove = 1 - progress / slideInEnd;
       } else {
-        heroMove = ((progress - holdEnd) / (1 - holdEnd));
+        heroMove = 0;
       }
 
-      section.style.setProperty("--hero-move", heroMove.toString());
+      section.style.setProperty("--hero-move-px", (heroMove * startOffsetPx).toString());
       section.style.setProperty("--scroll-progress", progress.toString());
     }
 
@@ -188,16 +200,23 @@ export default function LandingPage() {
       }
     }
 
+    function onResize() {
+      measureStartOffset();
+      onScroll();
+    }
+
+    measureStartOffset();
+    section.style.setProperty("--hero-move-px", startOffsetPx.toString());
     video.addEventListener("loadedmetadata", onLoadedMetadata);
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    window.addEventListener("resize", onResize);
 
     if (video.readyState >= 1) onLoadedMetadata();
 
     return () => {
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("resize", onResize);
       if (rafId != null) cancelAnimationFrame(rafId);
     };
   }, []);
@@ -363,16 +382,16 @@ export default function LandingPage() {
 
         .hero-scrub-section {
           --scroll-progress: 0;
-          --hero-move: -1;
+          --hero-move-px: 0;
         }
         .hero-scrub-video {
           opacity: 1;
         }
         .hero-scrub-overlay {
-          opacity: 0.35;
+          opacity: 0.55;
         }
         .hero-scrub-content {
-          transform: translateY(calc(var(--hero-move) * 85vh));
+          transform: translateY(var(--hero-move-px));
           transition: transform 0.05s linear;
         }
 
@@ -422,7 +441,7 @@ export default function LandingPage() {
             />
             <div className="hero-scrub-overlay" style={styles.heroScrubOverlay} />
 
-            <div className="hero-scrub-content" style={styles.heroScrubContent}>
+            <div ref={heroContentRef} className="hero-scrub-content" style={styles.heroScrubContent}>
               <h1 className="fade-up" style={styles.title}>
                 Describe it. Watch it build itself in Studio.
               </h1>
