@@ -167,8 +167,8 @@ export default function LandingPage() {
 
       video.currentTime = progress * video.duration;
 
-      const slideInEnd = 0.2;
-      const holdEnd = 0.8;
+      const slideInEnd = 0.15;
+      const holdEnd = 0.97;
       let heroMove;
       if (progress <= slideInEnd) {
         heroMove = (progress / slideInEnd) * 0.5;
