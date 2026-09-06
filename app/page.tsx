@@ -167,10 +167,18 @@ export default function LandingPage() {
 
       video.currentTime = progress * video.duration;
 
-      const revealDistance = 0.25;
-      const reveal = Math.min(1, progress / revealDistance);
+      const slideInEnd = 0.2;
+      const holdEnd = 0.8;
+      let heroMove;
+      if (progress <= slideInEnd) {
+        heroMove = (progress / slideInEnd) * 0.5;
+      } else if (progress <= holdEnd) {
+        heroMove = 0.5;
+      } else {
+        heroMove = 0.5 + ((progress - holdEnd) / (1 - holdEnd)) * 0.5;
+      }
 
-      section.style.setProperty("--reveal-progress", reveal.toString());
+      section.style.setProperty("--hero-move", heroMove.toString());
       section.style.setProperty("--scroll-progress", progress.toString());
     }
 
@@ -355,28 +363,21 @@ export default function LandingPage() {
 
         .hero-scrub-section {
           --scroll-progress: 0;
-          --reveal-progress: 0;
+          --hero-move: 0;
         }
         .hero-scrub-video {
-          opacity: var(--reveal-progress);
-          transform: scale(calc(1.08 - (0.08 * var(--reveal-progress))));
-          transition: opacity 0.05s linear, transform 0.05s linear;
+          opacity: 1;
         }
         .hero-scrub-overlay {
-          opacity: calc(var(--reveal-progress) * 0.55);
-          transition: opacity 0.05s linear;
+          opacity: 0.35;
         }
         .hero-scrub-content {
-          opacity: calc(1 - var(--reveal-progress));
-          transform: translateY(calc(var(--reveal-progress) * -40px)) scale(calc(1 - (0.06 * var(--reveal-progress))));
-          transition: opacity 0.05s linear, transform 0.05s linear;
-          pointer-events: none;
+          transform: translateY(calc(var(--hero-move) * 85vh));
+          transition: transform 0.05s linear;
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .hero-scrub-video { opacity: 1 !important; transform: none !important; transition: none !important; }
-          .hero-scrub-overlay { opacity: 0.55 !important; transition: none !important; }
-          .hero-scrub-content { opacity: 1 !important; transform: none !important; transition: none !important; }
+          .hero-scrub-content { transform: none !important; transition: none !important; }
         }
       `}</style>
 
