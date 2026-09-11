@@ -3,9 +3,7 @@
 import React from "react";
 
 interface LoadingScreenProps {
-  /** Optional message shown under the spinner */
   message?: string;
-  /** Render as a full-viewport screen (default) or inline within a container */
   fullScreen?: boolean;
 }
 

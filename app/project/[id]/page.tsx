@@ -133,15 +133,6 @@ function flattenInstances(
   return out;
 }
 
-/**
- * The model is instructed (see rules.ts SYSTEM_PROMPT) to prefer `operations`
- * over the legacy `instances` array, especially for edits. That means most
- * real responses carry created/modified content inside `operations`, not
- * `instances`. The "Created" UI previously only read from `instances`, so it
- * silently showed nothing for the common case. This derives display nodes
- * from the operations the model actually used, so scripts/UI created via
- * createInstance / setScriptSource / cloneInstance still show up.
- */
 function nodeFromOperation(op: StudioOperation): RobloxInstanceNode | null {
   const lastSegment = (path?: string) => {
     if (!path) return undefined;
