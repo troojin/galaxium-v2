@@ -776,7 +776,7 @@ export default function DashboardPage() {
               <input
                 autoFocus
                 type="text"
-                placeholder="my-awesome-project"
+                placeholder="My Awesome Game"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 style={styles.modalInput}
