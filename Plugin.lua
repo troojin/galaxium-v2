@@ -542,9 +542,6 @@ local KNOWN_SERVICES = {
 	end,
 }
 
--- Strips a leading "game." / "Game." segment so paths written either way
--- ("ServerScriptService.Foo" or "game.ServerScriptService.Foo") resolve
--- to the same thing instead of silently missing each other.
 local function normalizePath(path)
 	if type(path) ~= "string" then
 		return path
@@ -605,15 +602,6 @@ local function applyProperty(instance, key, rawValue)
 	end
 end
 
--- IMPORTANT: for any node that is nested inside another node in the SAME payload
--- (i.e. it arrived via a parent's "children" array), the tree structure it was sent
--- in is always the source of truth for where it should be parented. We deliberately
--- ignore that node's own "parent" field in that case, because the AI sometimes stamps
--- every node (not just top-level roots) with an absolute parent path, which would
--- otherwise silently override the nesting and pull things like a Frame out of its
--- ScreenGui and attach it to the ScreenGui's own parent instead.
--- The explicit "parent" field is only honored for a payload's root-level instances,
--- where there is no structural parent to fall back on (e.g. "StarterGui").
 local function walkAndCreate(node, structuralParentPath, flatList, instancesByPath)
 	local parentPath
 	if structuralParentPath then
@@ -712,7 +700,6 @@ local function applyInsert(payload)
 	end
 end
 
-
 local function serializeOperationTarget(instance)
 	if not instance then return nil end
 	return dumpSerializeInstance(instance, {})
@@ -738,7 +725,6 @@ local function findInstanceByPath(path, instancesByPath)
 	if inst and inst:GetFullName() == path then
 		return inst, nil
 	end
-	-- resolvePath returns nearest parent on miss, so verify the full path manually.
 	local segments = string.split(path, ".")
 	local rootGetter = KNOWN_SERVICES[segments[1]]
 	if not rootGetter then return nil, "unknown root " .. tostring(segments[1]) end
@@ -751,11 +737,6 @@ local function findInstanceByPath(path, instancesByPath)
 	return current, nil
 end
 
--- Looks for an instance already sitting under `parentPath` with the given
--- name (and, if provided, class), whether it was created earlier in this
--- same batch of operations or already existed in the game. Used to avoid
--- creating a duplicate when an operation's own "path" doesn't line up
--- exactly with how a prior operation in the same batch created it.
 local function findExistingChild(parentPath, name, className, instancesByPath)
 	if type(parentPath) ~= "string" or type(name) ~= "string" then
 		return nil
@@ -801,9 +782,6 @@ local function applyStudioOperations(payload)
 				if not parent then
 					table.insert(results, operationResult(false, opName, op.parent, err, nil))
 				else
-					-- Guard against the AI re-issuing a createInstance for something
-					-- that was already created earlier in this same batch (or already
-					-- exists in the game) under a slightly different path string.
 					local existing = findExistingChild(op.parent, op.name, op.className, instancesByPath)
 					if existing then
 						instancesByPath[normalizePath(op.parent) .. "." .. op.name] = existing
@@ -862,13 +840,8 @@ local function applyStudioOperations(payload)
 				table.insert(results, operationResult(true, opName, clone:GetFullName(), "cloned", clone))
 			end
 		elseif opName == "setScriptSource" then
-			-- 1) exact path match against this batch / the live tree
 			local target, err = findInstanceByPath(op.path, instancesByPath)
 
-			-- 2) fall back to "does parent already have a child with this name",
-			--    which covers a preceding createInstance op in the same batch
-			--    (or a pre-existing script) even if op.path doesn't line up
-			--    with how that instance was actually keyed.
 			if not target and type(op.parent) == "string" and type(op.name) == "string" then
 				local existing = findExistingChild(op.parent, op.name, op.className, instancesByPath)
 				if existing and (existing:IsA("Script") or existing:IsA("LocalScript") or existing:IsA("ModuleScript")) then
@@ -979,12 +952,6 @@ local function startInsertPolling()
 									warn("failed to ack insert " .. tostring(item.id) .. ": " .. tostring(ackErr))
 								end
 							else
-								-- Previously: only warned locally and left the insert
-								-- "pending" forever, so a real apply failure was
-								-- invisible outside the Studio Output window and the
-								-- chat kept showing the operation as if it succeeded.
-								-- Now we ack it as failed so it stops retrying and
-								-- the failure reason actually reaches the server.
 								warn("failed to apply insert " .. tostring(item.id) .. ": " .. tostring(applyErr))
 								rememberAppliedInsertId(item.id)
 								local _, ackErr = request("POST", "/insert/ack", {
@@ -1042,6 +1009,23 @@ local function loadRecentProject(apiKey)
 
 	if isNewProject then
 		log("active project changed, clearing local applied-insert dedupe cache")
+	end
+end
+
+-- Syncs this Studio user's Roblox user ID to the Galaxium backend
+-- so the web app can show their avatar in the topbar.
+local function syncRobloxUserId(apiKey)
+	local ok, userId = pcall(function()
+		return game:GetService("StudioService"):GetUserId()
+	end)
+	if not ok or not userId or userId == 0 then
+		warn("could not get StudioService userId")
+		return
+	end
+	log("syncing roblox user id: " .. tostring(userId))
+	local _, err = request("POST", "/me", { robloxUserId = userId }, apiKey)
+	if err then
+		warn("failed to sync roblox user id: " .. tostring(err))
 	end
 end
 
@@ -1109,6 +1093,7 @@ local function beginSignIn()
 			codeLabel.Text = ""
 			codeLabel.Visible = false
 			setSignedInUI(true)
+			task.spawn(syncRobloxUserId, apiKey)
 			loadRecentProject(apiKey)
 		else
 			warn("sign-in did not complete: " .. tostring(pollErr))
@@ -1155,6 +1140,7 @@ local existingKey = plugin:GetSetting(SETTING_KEY)
 if existingKey then
 	log("found existing api key, signed in on load")
 	setSignedInUI(true)
+	task.spawn(syncRobloxUserId, existingKey)
 	loadRecentProject(existingKey)
 else
 	log("no existing api key, signed out on load")

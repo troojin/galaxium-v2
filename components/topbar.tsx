@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cdnAsset } from "@/lib/cdn";
 
+const FALLBACK_AVATAR = cdnAsset("/icons/placeholder.png");
+const ROBLOX_HEADSHOT_API =
+  "https://thumbnails.roblox.com/v1/users/avatar-headshot?size=150x150&format=Png&isCircular=false&userIds=";
+
 function GearIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -43,7 +47,42 @@ export default function Topbar({ center, inProject }: TopbarProps) {
   const supabase = createClient();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string>(FALLBACK_AVATAR);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Fetch the Roblox user ID saved by the plugin and resolve the headshot URL
+  useEffect(() => {
+    async function loadAvatar() {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Grab the most recently created API key row that has a roblox_user_id
+        const { data: keyRow } = await supabase
+          .from("plugin_api_keys")
+          .select("roblox_user_id")
+          .eq("user_id", user.id)
+          .not("roblox_user_id", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!keyRow?.roblox_user_id) return;
+
+        // Hit the Roblox thumbnails API directly — no username lookup needed
+        const res = await fetch(ROBLOX_HEADSHOT_API + keyRow.roblox_user_id);
+        const data = await res.json();
+        const url: string | undefined = data?.data?.[0]?.imageUrl;
+        if (url) setAvatarUrl(url);
+      } catch {
+        // silently fall back to placeholder
+      }
+    }
+
+    loadAvatar();
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -90,7 +129,12 @@ export default function Topbar({ center, inProject }: TopbarProps) {
           onClick={() => setMenuOpen((prev) => !prev)}
           aria-label="Open menu"
         >
-          <img src={cdnAsset("/icons/placeholder.png")} alt="Profile" style={styles.avatarImg} />
+          <img
+            src={avatarUrl}
+            alt="Profile"
+            style={styles.avatarImg}
+            onError={() => setAvatarUrl(FALLBACK_AVATAR)}
+          />
         </button>
 
         {menuOpen && (
@@ -140,7 +184,7 @@ export default function Topbar({ center, inProject }: TopbarProps) {
         }
         @keyframes topbarDropdownIn {
           from { opacity: 0; transform: translateY(-4px) scale(0.97); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
+          to   { opacity: 1; transform: translateY(0)   scale(1);    }
         }
         .topbar-menu-item {
           background: transparent;
@@ -180,7 +224,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     WebkitBackdropFilter: "blur(16px) saturate(140%)",
     borderBottom: "1px solid rgba(255,255,255,0.06)",
     fontFamily: "'Inter', -apple-system, sans-serif",
-  },  brandWrap: {
+  },
+  brandWrap: {
     position: "relative",
     display: "flex",
     alignItems: "center",
