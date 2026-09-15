@@ -32,26 +32,17 @@ const MAX_DEPTH_EFFECT = 3;
 
 const VARIANT_STYLES: Record<
   ToastVariant,
-  { accent: string; accentSoft: string; glow: string; iconColor: string; barColor: string }
+  { iconColor: string; barColor: string }
 > = {
   success: {
-    accent: "#8b5cf6",
-    accentSoft: "rgba(139,92,246,0.16)",
-    glow: "0 10px 36px -10px rgba(139,92,246,0.5)",
     iconColor: "#c4b5fd",
     barColor: "linear-gradient(90deg, #8b5cf6, #a78bfa)",
   },
   error: {
-    accent: "#f87171",
-    accentSoft: "rgba(248,113,113,0.16)",
-    glow: "0 10px 36px -10px rgba(248,113,113,0.45)",
     iconColor: "#f87171",
     barColor: "linear-gradient(90deg, #ef4444, #f87171)",
   },
   info: {
-    accent: "#9a9aa5",
-    accentSoft: "rgba(255,255,255,0.08)",
-    glow: "0 10px 36px -10px rgba(0,0,0,0.65)",
     iconColor: "#c4c4cc",
     barColor: "linear-gradient(90deg, #6b6b74, #9a9aa5)",
   },
@@ -60,7 +51,7 @@ const VARIANT_STYLES: Record<
 function VariantIcon({ variant, color }: { variant: ToastVariant; color: string }) {
   if (variant === "success") {
     return (
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
         <path
           d="M4 12.5L9.5 18L20 6"
           stroke={color}
@@ -74,14 +65,14 @@ function VariantIcon({ variant, color }: { variant: ToastVariant; color: string 
   }
   if (variant === "error") {
     return (
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
         <path d="M12 5v9" stroke={color} strokeWidth="3" strokeLinecap="round" />
         <circle cx="12" cy="18" r="1.6" fill={color} />
       </svg>
     );
   }
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="7.2" r="1.6" fill={color} />
       <path d="M12 11v8" stroke={color} strokeWidth="3" strokeLinecap="round" />
     </svg>
@@ -177,7 +168,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         }
         .toast-item {
           animation: toastIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-          transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease, box-shadow 0.25s ease;
+          transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
         }
         .toast-item:hover {
           transform: translateY(-2px) scale(1.01) !important;
@@ -186,7 +177,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         .toast-item.leaving {
           animation: toastOut 0.3s cubic-bezier(0.4, 0, 1, 1) both;
         }
-        .toast-icon-circle {
+        .toast-icon {
           animation: toastIconPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.08s both;
         }
         .toast-check-path {
@@ -223,7 +214,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               className={`toast-item${t.leaving ? " leaving" : ""}`}
               style={{
                 ...styles.toast,
-                boxShadow: `${v.glow}, inset 0 0.5px 0 rgba(255,255,255,0.14)`,
                 transform: depth > 0 ? `scale(${1 - depth * 0.035}) translateY(${depth * -4}px)` : undefined,
                 opacity: depth > 0 ? 1 - depth * 0.16 : 1,
                 zIndex: 100 - depth,
@@ -233,17 +223,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               onMouseLeave={() => resume(t.id)}
               role="status"
             >
-              <span style={{ ...styles.accentSpine, background: v.barColor }} />
-
               <div style={styles.row}>
-                <span
-                  className="toast-icon-circle"
-                  style={{
-                    ...styles.icon,
-                    background: v.accentSoft,
-                    border: `1px solid ${v.accent}55`,
-                  }}
-                >
+                <span className="toast-icon" style={styles.icon}>
                   <VariantIcon variant={t.variant} color={v.iconColor} />
                 </span>
                 <span style={styles.message}>{t.message}</span>
@@ -310,19 +291,12 @@ const styles: { [key: string]: React.CSSProperties } = {
       "linear-gradient(160deg, rgba(16,16,18,0.94) 0%, rgba(4,4,6,0.94) 50%, rgba(8,8,10,0.94) 100%)",
     border: "1px solid rgba(255,255,255,0.09)",
     borderRadius: 12,
-    padding: "12px 14px 12px 16px",
+    padding: "12px 14px",
     backdropFilter: "blur(20px) saturate(140%)",
     WebkitBackdropFilter: "blur(20px) saturate(140%)",
     cursor: "pointer",
     fontFamily: "'Inter', -apple-system, sans-serif",
     overflow: "hidden",
-  },
-  accentSpine: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    width: 3,
   },
   row: {
     display: "flex",
@@ -331,9 +305,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   icon: {
     flexShrink: 0,
-    width: 22,
-    height: 22,
-    borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
